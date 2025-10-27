@@ -128,6 +128,7 @@ def api_balance():
                 'USD': 10000.00,
                 'BTC': 0.0,
                 'ETH': 0.0,
+                'total_usd': 10000.00,
                 'mock': True
             })
 
@@ -140,13 +141,38 @@ def api_balance():
 
         balance = exchange.fetch_balance()
 
+        # Get individual balances
+        usd_balance = float(balance.get('USD', {}).get('free', 0))
+        btc_balance = float(balance.get('BTC', {}).get('free', 0))
+        eth_balance = float(balance.get('ETH', {}).get('free', 0))
+        sol_balance = float(balance.get('SOL', {}).get('free', 0))
+
+        # Calculate total in USD (need to fetch prices)
+        total_usd = usd_balance
+
+        try:
+            # Fetch current prices to convert crypto to USD
+            if btc_balance > 0:
+                btc_ticker = exchange.fetch_ticker('BTC/USD')
+                total_usd += btc_balance * btc_ticker['last']
+
+            if eth_balance > 0:
+                eth_ticker = exchange.fetch_ticker('ETH/USD')
+                total_usd += eth_balance * eth_ticker['last']
+
+            if sol_balance > 0:
+                sol_ticker = exchange.fetch_ticker('SOL/USD')
+                total_usd += sol_balance * sol_ticker['last']
+        except:
+            pass  # If price fetch fails, just use USD balance
+
         # Return relevant balances
         return jsonify({
-            'USD': float(balance.get('USD', {}).get('free', 0)),
-            'BTC': float(balance.get('BTC', {}).get('free', 0)),
-            'ETH': float(balance.get('ETH', {}).get('free', 0)),
-            'SOL': float(balance.get('SOL', {}).get('free', 0)),
-            'total': balance.get('total', {}),
+            'USD': usd_balance,
+            'BTC': btc_balance,
+            'ETH': eth_balance,
+            'SOL': sol_balance,
+            'total_usd': total_usd,
             'mock': False
         })
 
@@ -156,6 +182,7 @@ def api_balance():
             'USD': 10000.00,
             'BTC': 0.0,
             'ETH': 0.0,
+            'total_usd': 10000.00,
             'mock': True,
             'error': str(e)
         })

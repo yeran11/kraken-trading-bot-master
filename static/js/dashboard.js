@@ -425,17 +425,30 @@ function updateBalance(data) {
     const totalBalance = document.getElementById('total-balance');
     const balanceChange = document.getElementById('balance-change');
 
-    if (data.total_usd) {
+    // Update total balance
+    if (data.total_usd !== undefined) {
         totalBalance.textContent = '$' + data.total_usd.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    } else {
+        // Calculate total from individual balances if total_usd not provided
+        const total = (data.USD || 0) + (data.BTC || 0) * 100000 + (data.ETH || 0) * 4000;
+        totalBalance.textContent = '$' + total.toLocaleString('en-US', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         });
     }
 
-    // Update balance change (mock for now)
-    const change = Math.random() * 10 - 5;
-    balanceChange.textContent = change.toFixed(2) + '%';
-    balanceChange.parentElement.className = change >= 0 ? 'text-success' : 'text-danger';
+    // Hide percentage change if no historical data
+    // TODO: Implement actual percentage calculation based on historical balance
+    if (data.change_24h !== undefined) {
+        balanceChange.textContent = data.change_24h.toFixed(2) + '%';
+        balanceChange.parentElement.className = data.change_24h >= 0 ? 'text-success' : 'text-danger';
+    } else {
+        // Hide the percentage indicator if we don't have historical data
+        balanceChange.parentElement.style.display = 'none';
+    }
 }
 
 function updatePositions(positions) {
