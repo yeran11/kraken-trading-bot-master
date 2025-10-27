@@ -101,9 +101,12 @@ class TradingEngine:
                         break
 
                     try:
+                        symbol = pair_config.get('symbol', 'UNKNOWN')
+                        logger.debug(f"Processing {symbol}...")
                         self._process_pair(pair_config)
                     except Exception as e:
-                        logger.error(f"Error processing {pair_config['symbol']}: {e}")
+                        symbol = pair_config.get('symbol', 'UNKNOWN') if isinstance(pair_config, dict) else 'UNKNOWN'
+                        logger.error(f"Error processing {symbol}: {e}", exc_info=True)
 
                 # Check existing positions for stop-loss/take-profit
                 self._check_positions()
@@ -119,13 +122,40 @@ class TradingEngine:
         """Get list of enabled trading pairs from config"""
         enabled = []
 
-        for symbol, config in self.config.items():
-            if config.get('enabled', False):
-                enabled.append({
-                    'symbol': symbol,
-                    'allocation': config.get('allocation', 0),
-                    'strategies': config.get('strategies', [])
-                })
+        try:
+            for symbol, config in self.config.items():
+                # Handle both dict and list formats
+                if isinstance(config, dict):
+                    # New format: {"enabled": true, "allocation": 20, "strategies": [...]}
+                    if config.get('enabled', False):
+                        enabled.append({
+                            'symbol': symbol,
+                            'allocation': config.get('allocation', 10),
+                            'strategies': config.get('strategies', ['momentum'])
+                        })
+                elif isinstance(config, list):
+                    # Old format: just a list of strategies ["momentum", "scalping"]
+                    # Assume enabled if strategies are present
+                    if config:
+                        enabled.append({
+                            'symbol': symbol,
+                            'allocation': 10,  # Default 10%
+                            'strategies': config
+                        })
+                elif isinstance(config, bool):
+                    # Simple boolean format: true/false
+                    if config:
+                        enabled.append({
+                            'symbol': symbol,
+                            'allocation': 10,
+                            'strategies': ['momentum']
+                        })
+
+            logger.info(f"Found {len(enabled)} enabled trading pairs: {[p['symbol'] for p in enabled]}")
+
+        except Exception as e:
+            logger.error(f"Error parsing trading pairs config: {e}")
+            enabled = []
 
         return enabled
 
