@@ -493,8 +493,40 @@ class TradingEngine:
                     return
 
                 position = self.positions[symbol]
-                quantity = position['quantity']
+                tracked_quantity = position['quantity']
                 entry_price = position['entry_price']
+
+                # CRITICAL: Fetch actual balance from Kraken before selling
+                # This ensures we sell what we actually have, not what we think we have
+                base_currency = symbol.split('/')[0]  # e.g., "PUMP" from "PUMP/USD"
+
+                try:
+                    balance = self.exchange.fetch_balance()
+                    actual_quantity = float(balance.get(base_currency, {}).get('free', 0))
+
+                    logger.info(f"Balance check - Tracked: {tracked_quantity:.8f}, Actual: {actual_quantity:.8f} {base_currency}")
+
+                    # Use actual quantity if it's available
+                    if actual_quantity > 0:
+                        # Use the smaller of tracked vs actual (to be safe)
+                        quantity = min(tracked_quantity, actual_quantity)
+
+                        if actual_quantity < tracked_quantity * 0.99:  # More than 1% difference
+                            logger.warning(f"⚠️ Balance mismatch! Tracked: {tracked_quantity:.8f}, Actual: {actual_quantity:.8f}")
+                            logger.warning(f"Using actual balance: {actual_quantity:.8f} {base_currency}")
+                            quantity = actual_quantity
+                    else:
+                        logger.error(f"❌ No {base_currency} balance found on Kraken!")
+                        logger.error(f"Tracked quantity: {tracked_quantity:.8f}")
+                        logger.error(f"This position may have been manually closed or the buy order didn't fill")
+                        # Remove position from tracking since it doesn't exist
+                        del self.positions[symbol]
+                        self.save_positions()
+                        return
+
+                except Exception as balance_error:
+                    logger.warning(f"Could not fetch balance: {balance_error}. Using tracked quantity.")
+                    quantity = tracked_quantity
 
                 # Calculate P&L
                 pnl = (price - entry_price) * quantity
