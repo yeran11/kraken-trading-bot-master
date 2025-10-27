@@ -439,6 +439,52 @@ def api_positions():
         traceback.print_exc()
         return jsonify([])
 
+@app.route('/api/trades')
+def api_trades():
+    """Get recent trade history from the engine"""
+    global trading_engine
+
+    if not trading_engine:
+        print("DEBUG: No trading engine instance for trades")
+        return jsonify([])
+
+    try:
+        trades = trading_engine.get_trades()
+        print(f"DEBUG: Got {len(trades)} trades from engine")
+
+        # Convert to dashboard format
+        formatted_trades = []
+        for trade in trades:
+            formatted_trade = {
+                'symbol': trade.get('symbol', 'UNKNOWN'),
+                'side': trade.get('action', 'UNKNOWN'),  # Map 'action' to 'side' for dashboard
+                'action': trade.get('action', 'UNKNOWN'),  # Keep both for compatibility
+                'price': trade.get('price', 0),
+                'quantity': trade.get('quantity', 0),
+                'pnl': trade.get('pnl', 0),
+                'pnl_percent': trade.get('pnl_percent', 0),
+                'usd_amount': trade.get('usd_amount', 0),
+                'reason': trade.get('reason', ''),
+                'timestamp': trade.get('timestamp', ''),
+                'order_id': trade.get('order_id', '')
+            }
+            formatted_trades.append(formatted_trade)
+
+        # Return most recent trades first (reverse chronological)
+        trades_sorted = sorted(formatted_trades, key=lambda x: x.get('timestamp', ''), reverse=True)
+
+        # Limit to last 50 trades for performance
+        recent_trades = trades_sorted[:50]
+
+        print(f"DEBUG: Returning {len(recent_trades)} recent trades to dashboard")
+        return jsonify(recent_trades)
+
+    except Exception as e:
+        print(f"ERROR in api_trades: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify([])
+
 @app.route('/api/start', methods=['POST'])
 def api_start():
     """Start the trading bot - REAL TRADING ENGINE"""
