@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Kraken Trading Bot</title>
+
+    <!-- CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/dashboard.css') }}" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-robot"></i> Kraken Trading Bot
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <a class="nav-link active" href="/settings">
+                    <i class="fas fa-cog"></i> Settings
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-5 pt-5">
+        <!-- Alert Messages -->
+        <div id="alert-container"></div>
+
+        <!-- API Credentials Card -->
+        <div class="row mb-4">
+            <div class="col-lg-8 mx-auto">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-key"></i> API Credentials
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-warning" role="alert">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Security Notice:</strong> Your API credentials are stored securely in the .env file.
+                            Never share these credentials with anyone.
+                        </div>
+
+                        <form id="api-credentials-form">
+                            <div class="mb-3">
+                                <label for="api-key" class="form-label">
+                                    <i class="fas fa-key"></i> Kraken API Key
+                                </label>
+                                <input type="password" class="form-control" id="api-key"
+                                       placeholder="Enter your Kraken API Key">
+                                <small class="form-text text-muted">
+                                    Get your API key from:
+                                    <a href="https://www.kraken.com/u/security/api" target="_blank">
+                                        https://www.kraken.com/u/security/api
+                                    </a>
+                                </small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="api-secret" class="form-label">
+                                    <i class="fas fa-lock"></i> Kraken API Secret
+                                </label>
+                                <input type="password" class="form-control" id="api-secret"
+                                       placeholder="Enter your Kraken API Secret">
+                                <small class="form-text text-muted">
+                                    This is your private key shown once when creating the API key.
+                                </small>
+                            </div>
+
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="show-credentials">
+                                <label class="form-check-label" for="show-credentials">
+                                    Show credentials (not recommended)
+                                </label>
+                            </div>
+
+                            <div class="alert alert-info" role="alert">
+                                <strong>Required Permissions:</strong>
+                                <ul class="mb-0">
+                                    <li>✅ Query Funds</li>
+                                    <li>✅ Query Open Orders & Trades</li>
+                                    <li>✅ Query Closed Orders & Trades</li>
+                                    <li>✅ Create & Modify Orders</li>
+                                    <li>✅ Cancel/Close Orders</li>
+                                    <li>❌ DO NOT enable "Withdraw Funds"</li>
+                                </ul>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-save"></i> Save API Credentials
+                                </button>
+                                <button type="button" class="btn btn-secondary" id="test-connection">
+                                    <i class="fas fa-vial"></i> Test Connection
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Management Settings -->
+        <div class="row mb-4">
+            <div class="col-lg-8 mx-auto">
+                <div class="card">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-shield-alt"></i> Risk Management
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="risk-settings-form">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="max-order-size" class="form-label">Max Order Size (USD)</label>
+                                    <input type="number" class="form-control" id="max-order-size"
+                                           value="{{ max_order_size }}" min="10" step="10">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="max-position-size" class="form-label">Max Position Size (USD)</label>
+                                    <input type="number" class="form-control" id="max-position-size"
+                                           value="{{ max_position_size }}" min="50" step="50">
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="max-exposure" class="form-label">Max Total Exposure (USD)</label>
+                                    <input type="number" class="form-control" id="max-exposure"
+                                           value="{{ max_exposure }}" min="100" step="100">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="max-daily-loss" class="form-label">Max Daily Loss (USD)</label>
+                                    <input type="number" class="form-control" id="max-daily-loss"
+                                           value="{{ max_daily_loss }}" min="50" step="50">
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="stop-loss" class="form-label">Stop Loss (%)</label>
+                                    <input type="number" class="form-control" id="stop-loss"
+                                           value="{{ stop_loss }}" min="0.5" max="20" step="0.1">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="take-profit" class="form-label">Take Profit (%)</label>
+                                    <input type="number" class="form-control" id="take-profit"
+                                           value="{{ take_profit }}" min="0.5" max="50" step="0.1">
+                                </div>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-danger btn-lg">
+                                    <i class="fas fa-save"></i> Update Risk Settings
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trading Mode Settings -->
+        <div class="row mb-4">
+            <div class="col-lg-8 mx-auto">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="fas fa-flask"></i> Trading Mode
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Warning:</strong> Changing trading mode requires restarting the bot.
+                        </div>
+
+                        <form id="trading-mode-form">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="paper-trading"
+                                       {% if paper_trading %}checked{% endif %}>
+                                <label class="form-check-label" for="paper-trading">
+                                    <strong>Paper Trading Mode</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        When enabled, trades are simulated without real money.
+                                        When disabled, real trades will be executed.
+                                    </small>
+                                </label>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-warning btn-lg text-dark">
+                                    <i class="fas fa-save"></i> Update Trading Mode (Requires Restart)
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trading Pairs Configuration -->
+        <div class="row mb-4">
+            <div class="col-lg-10 mx-auto">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-exchange-alt"></i> Trading Pairs Configuration
+                            </h5>
+                            <button type="button" class="btn btn-light btn-sm" id="refresh-pairs">
+                                <i class="fas fa-sync-alt"></i> Refresh Prices
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info" role="alert">
+                            <i class="fas fa-info-circle"></i>
+                            Select which trading pairs the bot should trade. Allocations represent the percentage of your capital dedicated to each pair.
+                        </div>
+
+                        <!-- Selected/Active Pairs Quick View -->
+                        <div class="mb-4 p-3 border rounded" style="background: rgba(87, 65, 217, 0.1); border-color: var(--kraken-blue) !important;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0"><i class="fas fa-check-circle text-success"></i> <strong>Active Pairs</strong></h6>
+                                <button class="btn btn-sm btn-outline-danger" id="clear-all-pairs" style="display: none;">
+                                    <i class="fas fa-times"></i> Clear All
+                                </button>
+                            </div>
+                            <div id="selected-pairs-container" class="mb-2">
+                                <small class="text-muted">No pairs selected yet. Enable pairs below to start trading.</small>
+                            </div>
+                            <div class="mt-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Total Allocation:</strong></span>
+                                    <span id="total-allocation" class="badge bg-primary" style="font-size: 1.1em;">0%</span>
+                                </div>
+                                <div class="progress mt-2" style="height: 25px;">
+                                    <div id="allocation-bar" class="progress-bar" role="progressbar" style="width: 0%">0%</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- All Trading Pairs Section Header -->
+                        <div class="mb-3 mt-4">
+                            <h6><i class="fas fa-list"></i> <strong>All Trading Pairs</strong></h6>
+                            <small class="text-muted">Select pairs to trade, adjust allocations, and choose strategies</small>
+                        </div>
+
+                        <!-- Search and Filter -->
+                        <div class="mb-3">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" class="form-control" id="pair-search" placeholder="Search pairs (e.g., BTC, ETH, SOL)...">
+                                <button class="btn btn-outline-secondary" type="button" id="clear-search">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Found: <span id="pair-count">0</span> pairs</small>
+                        </div>
+
+                        <!-- Trading Pairs List -->
+                        <div id="trading-pairs-container" style="max-height: 600px; overflow-y: auto; border: 1px solid rgba(87, 65, 217, 0.3); border-radius: 8px; padding: 1rem; background: rgba(15, 18, 25, 0.3);">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Loading available pairs...</p>
+                            </div>
+                        </div>
+
+                        <!-- Save Button -->
+                        <div class="d-grid mt-4">
+                            <button type="button" class="btn btn-success btn-lg" id="save-pairs-config">
+                                <i class="fas fa-save"></i> Save Trading Pairs Configuration
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Settings -->
+        <div class="row mb-4">
+            <div class="col-lg-8 mx-auto">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-bell"></i> Alert Settings
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="alert-settings-form">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="email-alerts"
+                                       {% if email_alerts %}checked{% endif %}>
+                                <label class="form-check-label" for="email-alerts">
+                                    <strong>Email Alerts</strong>
+                                </label>
+                            </div>
+
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="telegram-alerts"
+                                       {% if telegram_alerts %}checked{% endif %}>
+                                <label class="form-check-label" for="telegram-alerts">
+                                    <strong>Telegram Alerts</strong>
+                                </label>
+                            </div>
+
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="discord-alerts"
+                                       {% if discord_alerts %}checked{% endif %}>
+                                <label class="form-check-label" for="discord-alerts">
+                                    <strong>Discord Alerts</strong>
+                                </label>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-info btn-lg">
+                                    <i class="fas fa-save"></i> Update Alert Settings
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Show/hide credentials
+        $('#show-credentials').on('change', function() {
+            const type = this.checked ? 'text' : 'password';
+            $('#api-key, #api-secret').attr('type', type);
+        });
+
+        // Show alert
+        function showAlert(message, type = 'success') {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            $('#alert-container').html(alertHtml);
+
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                $('.alert').fadeOut();
+            }, 5000);
+        }
+
+        // API Credentials Form
+        $('#api-credentials-form').on('submit', function(e) {
+            e.preventDefault();
+
+            const apiKey = $('#api-key').val().trim();
+            const apiSecret = $('#api-secret').val().trim();
+
+            if (!apiKey || !apiSecret) {
+                showAlert('Please enter both API Key and API Secret.', 'warning');
+                return;
+            }
+
+            $.ajax({
+                url: '/api/credentials',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    api_key: apiKey,
+                    api_secret: apiSecret
+                }),
+                success: function(response) {
+                    showAlert('<i class="fas fa-check-circle"></i> API credentials saved successfully! Please restart the bot for changes to take effect.', 'success');
+                    $('#api-key, #api-secret').val('');
+                },
+                error: function(xhr) {
+                    const error = xhr.responseJSON?.error || 'Failed to save credentials';
+                    showAlert('<i class="fas fa-times-circle"></i> Error: ' + error, 'danger');
+                }
+            });
+        });
+
+        // Test Connection
+        $('#test-connection').on('click', function() {
+            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Testing...');
+
+            $.ajax({
+                url: '/api/test-connection',
+                method: 'GET',
+                success: function(response) {
+                    showAlert('<i class="fas fa-check-circle"></i> Connection successful! API credentials are working correctly.', 'success');
+                    $('#test-connection').prop('disabled', false).html('<i class="fas fa-vial"></i> Test Connection');
+                },
+                error: function(xhr) {
+                    const error = xhr.responseJSON?.error || 'Connection failed';
+                    showAlert('<i class="fas fa-times-circle"></i> Connection failed: ' + error, 'danger');
+                    $('#test-connection').prop('disabled', false).html('<i class="fas fa-vial"></i> Test Connection');
+                }
+            });
+        });
+
+        // Risk Settings Form
+        $('#risk-settings-form').on('submit', function(e) {
+            e.preventDefault();
+
+            const settings = {
+                max_order_size: parseFloat($('#max-order-size').val()),
+                max_position_size: parseFloat($('#max-position-size').val()),
+                max_exposure: parseFloat($('#max-exposure').val()),
+                max_daily_loss: parseFloat($('#max-daily-loss').val()),
+                stop_loss: parseFloat($('#stop-loss').val()),
+                take_profit: parseFloat($('#take-profit').val())
+            };
+
+            $.ajax({
+                url: '/api/risk-settings',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(settings),
+                success: function(response) {
+                    showAlert('<i class="fas fa-check-circle"></i> Risk settings updated successfully!', 'success');
+                },
+                error: function(xhr) {
+                    const error = xhr.responseJSON?.error || 'Failed to update settings';
+                    showAlert('<i class="fas fa-times-circle"></i> Error: ' + error, 'danger');
+                }
+            });
+        });
+
+        // Trading Mode Form
+        $('#trading-mode-form').on('submit', function(e) {
+            e.preventDefault();
+
+            const paperTrading = $('#paper-trading').is(':checked');
+
+            $.ajax({
+                url: '/api/trading-mode',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    paper_trading: paperTrading
+                }),
+                success: function(response) {
+                    showAlert('<i class="fas fa-check-circle"></i> Trading mode updated! Please restart the bot for changes to take effect.', 'warning');
+                },
+                error: function(xhr) {
+                    const error = xhr.responseJSON?.error || 'Failed to update trading mode';
+                    showAlert('<i class="fas fa-times-circle"></i> Error: ' + error, 'danger');
+                }
+            });
+        });
+
+        // Alert Settings Form
+        $('#alert-settings-form').on('submit', function(e) {
+            e.preventDefault();
+
+            const settings = {
+                email_alerts: $('#email-alerts').is(':checked'),
+                telegram_alerts: $('#telegram-alerts').is(':checked'),
+                discord_alerts: $('#discord-alerts').is(':checked')
+            };
+
+            $.ajax({
+                url: '/api/alert-settings',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(settings),
+                success: function(response) {
+                    showAlert('<i class="fas fa-check-circle"></i> Alert settings updated successfully!', 'success');
+                },
+                error: function(xhr) {
+                    const error = xhr.responseJSON?.error || 'Failed to update alert settings';
+                    showAlert('<i class="fas fa-times-circle"></i> Error: ' + error, 'danger');
+                }
+            });
+        });
+
+        // ===================================
+        // TRADING PAIRS CONFIGURATION
+        // ===================================
+
+        let availablePairs = [];
+        let currentConfig = {};
+
+        // Load trading pairs on page load
+        loadTradingPairs();
+
+        function loadTradingPairs() {
+            // Load available pairs
+            $.get('/api/available-pairs')
+                .done(function(response) {
+                    availablePairs = response.pairs || [];
+
+                    if (availablePairs.length === 0) {
+                        $('#trading-pairs-container').html(`
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>No pairs returned from API.</strong><br>
+                                Make sure the bot is running and ccxt is installed.<br>
+                                <small>Run: <code>pip install ccxt</code></small>
+                            </div>
+                        `);
+                        return;
+                    }
+
+                    // Load current configuration
+                    $.get('/api/trading-pairs', function(configResponse) {
+                        currentConfig = configResponse.config || { pairs: [] };
+                        renderTradingPairs();
+                    }).fail(function(xhr) {
+                        // Config doesn't exist yet - use defaults
+                        currentConfig = { pairs: [] };
+                        renderTradingPairs();
+                    });
+                })
+                .fail(function(xhr, status, error) {
+                    console.error('Failed to load pairs:', xhr.status, error);
+                    $('#trading-pairs-container').html(`
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Failed to load trading pairs</strong><br>
+                            Error: ${xhr.status} - ${error || 'Unknown error'}<br>
+                            <small>Make sure the bot is running on port 5000</small><br>
+                            <button class="btn btn-sm btn-primary mt-2" onclick="loadTradingPairs()">
+                                <i class="fas fa-sync"></i> Retry
+                            </button>
+                        </div>
+                    `);
+                });
+        }
+
+        function renderTradingPairs() {
+            const container = $('#trading-pairs-container');
+            container.empty();
+
+            // Merge available pairs with config
+            const configMap = {};
+            currentConfig.pairs.forEach(p => {
+                configMap[p.symbol] = p;
+            });
+
+            // Add pairs that are in config but not in available (to preserve settings)
+            currentConfig.pairs.forEach(p => {
+                if (!availablePairs.find(ap => ap.symbol === p.symbol)) {
+                    availablePairs.push({
+                        symbol: p.symbol,
+                        base: p.symbol.split('/')[0],
+                        quote: 'USD',
+                        price: 0,
+                        change_24h: 0,
+                        priority: false
+                    });
+                }
+            });
+
+            // Render pairs immediately (without waiting for prices)
+            availablePairs.forEach(pair => {
+                const config = configMap[pair.symbol] || {
+                    enabled: false,
+                    allocation: 10,
+                    strategies: ['momentum']
+                };
+
+                const pairHtml = `
+                    <div class="pair-card mb-2 p-3 border rounded ${config.enabled ? 'border-success' : ''}" data-symbol="${pair.symbol}" style="transition: all 0.3s ease;">
+                        <div class="row align-items-center">
+                            <!-- Enable Checkbox and Symbol -->
+                            <div class="col-md-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input pair-enabled" type="checkbox" id="pair-${pair.base}"
+                                           ${config.enabled ? 'checked' : ''}>
+                                    <label class="form-check-label" for="pair-${pair.base}">
+                                        <strong style="font-size: 1.1em;">${pair.symbol}</strong>
+                                    </label>
+                                </div>
+                                <small class="text-muted ms-4">${pair.base} to USD</small>
+                            </div>
+
+                            <!-- Price Info -->
+                            <div class="col-md-3">
+                                <div class="pair-price-info">
+                                    <div><strong>Price:</strong> <span class="pair-price text-muted"><i class="fas fa-spinner fa-spin"></i> Loading...</span></div>
+                                    <div><strong>24h:</strong> <span class="pair-change badge bg-secondary">--</span></div>
+                                </div>
+                            </div>
+
+                            <!-- Allocation Slider -->
+                            <div class="col-md-3">
+                                <label class="form-label"><strong>Allocation:</strong> <span class="allocation-value">${config.allocation}%</span></label>
+                                <input type="range" class="form-range pair-allocation" min="0" max="100" step="5" value="${config.allocation}">
+                            </div>
+
+                            <!-- Strategy Selection -->
+                            <div class="col-md-3">
+                                <label class="form-label"><strong>Strategies:</strong></label>
+                                <div class="pair-strategies">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input strategy-check" type="checkbox" value="momentum"
+                                               ${config.strategies.includes('momentum') ? 'checked' : ''}>
+                                        <label class="form-check-label" style="font-size: 0.9em;">Momentum</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input strategy-check" type="checkbox" value="mean_reversion"
+                                               ${config.strategies.includes('mean_reversion') ? 'checked' : ''}>
+                                        <label class="form-check-label" style="font-size: 0.9em;">Mean Rev</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input strategy-check" type="checkbox" value="scalping"
+                                               ${config.strategies.includes('scalping') ? 'checked' : ''}>
+                                        <label class="form-check-label" style="font-size: 0.9em;">Scalping</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                container.append(pairHtml);
+            });
+
+            // Update pair count
+            updatePairCount();
+
+            // Add event listeners
+            $('.pair-enabled').on('change', function() {
+                const card = $(this).closest('.pair-card');
+                if ($(this).is(':checked')) {
+                    card.addClass('border-success');
+                } else {
+                    card.removeClass('border-success');
+                }
+                updateTotalAllocation();
+            });
+
+            $('.pair-allocation').on('input', function() {
+                const value = $(this).val();
+                $(this).siblings('label').find('.allocation-value').text(value + '%');
+                updateTotalAllocation(); // This also updates selected pairs display
+            });
+
+            // Update selected pairs when strategies change
+            $('.strategy-check').on('change', function() {
+                updateSelectedPairsDisplay();
+            });
+
+            // Initial allocation calculation
+            updateTotalAllocation();
+
+            // Lazy load prices after rendering (much faster UX)
+            setTimeout(loadPricesForPairs, 100);
+        }
+
+        function loadPricesForPairs() {
+            const symbols = availablePairs.map(p => p.symbol);
+
+            $.ajax({
+                url: '/api/pair-prices',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ symbols: symbols }),
+                success: function(response) {
+                    // Update prices in UI
+                    Object.keys(response.prices).forEach(symbol => {
+                        const price = response.prices[symbol];
+                        const card = $(`.pair-card[data-symbol="${symbol}"]`);
+
+                        if (price.error) {
+                            card.find('.pair-price').html('<span class="text-warning">N/A</span>');
+                            card.find('.pair-change').text('--').removeClass('bg-success bg-danger').addClass('bg-secondary');
+                        } else {
+                            card.find('.pair-price').text('$' + price.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+
+                            const changeSpan = card.find('.pair-change');
+                            changeSpan.text((price.change_24h >= 0 ? '+' : '') + price.change_24h.toFixed(2) + '%');
+                            changeSpan.removeClass('bg-success bg-danger bg-secondary').addClass(price.change_24h >= 0 ? 'bg-success' : 'bg-danger');
+                        }
+                    });
+                },
+                error: function() {
+                    // If price loading fails, just show N/A
+                    $('.pair-price').html('<span class="text-warning">N/A</span>');
+                }
+            });
+        }
+
+        function updateTotalAllocation() {
+            let total = 0;
+            $('.pair-card').each(function() {
+                const enabled = $(this).find('.pair-enabled').is(':checked');
+                if (enabled) {
+                    const allocation = parseInt($(this).find('.pair-allocation').val());
+                    total += allocation;
+                }
+            });
+
+            $('#total-allocation').text(total + '%');
+            $('#allocation-bar').css('width', total + '%').text(total + '%');
+
+            // Change color based on total
+            const bar = $('#allocation-bar');
+            bar.removeClass('bg-success bg-warning bg-danger');
+            if (total <= 100) {
+                bar.addClass('bg-success');
+            } else if (total <= 120) {
+                bar.addClass('bg-warning');
+            } else {
+                bar.addClass('bg-danger');
+            }
+
+            // Update selected pairs display
+            updateSelectedPairsDisplay();
+        }
+
+        function updateSelectedPairsDisplay() {
+            const container = $('#selected-pairs-container');
+            const selectedPairs = [];
+
+            // Find all enabled pairs
+            $('.pair-card').each(function() {
+                const enabled = $(this).find('.pair-enabled').is(':checked');
+                if (enabled) {
+                    const symbol = $(this).data('symbol');
+                    const allocation = parseInt($(this).find('.pair-allocation').val());
+
+                    // Get selected strategies
+                    const strategies = [];
+                    $(this).find('.strategy-check:checked').each(function() {
+                        strategies.push($(this).val());
+                    });
+
+                    selectedPairs.push({
+                        symbol: symbol,
+                        allocation: allocation,
+                        strategies: strategies
+                    });
+                }
+            });
+
+            // Update the display
+            if (selectedPairs.length === 0) {
+                container.html('<small class="text-muted">No pairs selected yet. Enable pairs below to start trading.</small>');
+                $('#clear-all-pairs').hide();
+            } else {
+                let html = '<div class="d-flex flex-wrap gap-2">';
+
+                selectedPairs.forEach(pair => {
+                    const strategyBadges = pair.strategies.map(s => {
+                        const shortNames = {
+                            'momentum': 'M',
+                            'mean_reversion': 'MR',
+                            'scalping': 'S'
+                        };
+                        return `<span class="badge bg-secondary" style="font-size: 0.7em;">${shortNames[s] || s}</span>`;
+                    }).join(' ');
+
+                    html += `
+                        <div class="selected-pair-pill p-2 border rounded d-flex align-items-center gap-2"
+                             data-symbol="${pair.symbol}"
+                             style="background: rgba(28, 32, 51, 0.6); transition: all 0.2s ease;">
+                            <div>
+                                <strong style="font-size: 0.95em;">${pair.symbol}</strong>
+                                <div class="d-flex gap-1 align-items-center mt-1">
+                                    <span class="badge bg-success" style="font-size: 0.75em;">${pair.allocation}%</span>
+                                    ${strategyBadges}
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger remove-pair-btn"
+                                    data-symbol="${pair.symbol}"
+                                    style="padding: 0.2rem 0.4rem; font-size: 0.8em;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                container.html(html);
+                $('#clear-all-pairs').show();
+
+                // Add click handlers for remove buttons
+                $('.remove-pair-btn').on('click', function() {
+                    const symbol = $(this).data('symbol');
+                    // Find the pair card and uncheck it
+                    $(`.pair-card[data-symbol="${symbol}"]`).find('.pair-enabled').prop('checked', false).trigger('change');
+                });
+            }
+        }
+
+        // Clear all pairs button
+        $('#clear-all-pairs').on('click', function() {
+            if (confirm('Are you sure you want to disable all trading pairs?')) {
+                $('.pair-enabled:checked').prop('checked', false).trigger('change');
+            }
+        });
+
+        // Search functionality with debounce
+        let searchTimeout;
+        $('#pair-search').on('input', function() {
+            clearTimeout(searchTimeout);
+            const searchTerm = $(this).val().toLowerCase();
+
+            searchTimeout = setTimeout(function() {
+                let visibleCount = 0;
+                $('.pair-card').each(function() {
+                    const symbol = $(this).data('symbol').toLowerCase();
+                    if (symbol.includes(searchTerm)) {
+                        $(this).slideDown(200);
+                        visibleCount++;
+                    } else {
+                        $(this).slideUp(200);
+                    }
+                });
+
+                // Update count
+                $('#pair-count').text(visibleCount);
+
+                // Scroll to top of container
+                if (searchTerm) {
+                    $('#trading-pairs-container').scrollTop(0);
+                }
+            }, 150);
+        });
+
+        // Clear search button
+        $('#clear-search').on('click', function() {
+            $('#pair-search').val('').trigger('input');
+            $('.pair-card').slideDown(200);
+            updatePairCount();
+        });
+
+        // Update pair count
+        function updatePairCount() {
+            const visible = $('.pair-card:visible').length;
+            const total = $('.pair-card').length;
+            $('#pair-count').text(visible + (visible !== total ? ' of ' + total : ''));
+        }
+
+        // Refresh prices
+        $('#refresh-pairs').on('click', function() {
+            const symbols = availablePairs.map(p => p.symbol);
+
+            if (symbols.length === 0) {
+                showAlert('<i class="fas fa-exclamation-triangle"></i> No pairs loaded yet. Please wait...', 'warning');
+                return;
+            }
+
+            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Refreshing...');
+
+            $.ajax({
+                url: '/api/pair-prices',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ symbols: symbols }),
+                success: function(response) {
+                    // Update prices in UI
+                    Object.keys(response.prices).forEach(symbol => {
+                        const price = response.prices[symbol];
+                        const card = $(`.pair-card[data-symbol="${symbol}"]`);
+                        card.find('.pair-price').text('$' + price.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+
+                        const changeSpan = card.find('.pair-change');
+                        changeSpan.text((price.change_24h >= 0 ? '+' : '') + price.change_24h.toFixed(2) + '%');
+                        changeSpan.removeClass('bg-success bg-danger').addClass(price.change_24h >= 0 ? 'bg-success' : 'bg-danger');
+                    });
+
+                    showAlert('<i class="fas fa-check-circle"></i> Prices refreshed!', 'success');
+                    $('#refresh-pairs').prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Refresh Prices');
+                },
+                error: function(xhr) {
+                    const error = xhr.responseJSON?.error || 'Failed to refresh prices';
+                    showAlert('<i class="fas fa-times-circle"></i> ' + error, 'danger');
+                    $('#refresh-pairs').prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Refresh Prices');
+                }
+            });
+        });
+
+        // Save pairs configuration
+        $('#save-pairs-config').on('click', function() {
+            const pairs = [];
+
+            $('.pair-card').each(function() {
+                const symbol = $(this).data('symbol');
+                const enabled = $(this).find('.pair-enabled').is(':checked');
+                const allocation = parseInt($(this).find('.pair-allocation').val());
+
+                const strategies = [];
+                $(this).find('.strategy-check:checked').each(function() {
+                    strategies.push($(this).val());
+                });
+
+                pairs.push({
+                    symbol: symbol,
+                    enabled: enabled,
+                    allocation: allocation,
+                    strategies: strategies
+                });
+            });
+
+            // Validate
+            const total = pairs.filter(p => p.enabled).reduce((sum, p) => sum + p.allocation, 0);
+            if (total > 100) {
+                showAlert('<i class="fas fa-exclamation-triangle"></i> Total allocation exceeds 100%! Please adjust.', 'warning');
+                return;
+            }
+
+            // Check if at least one pair is enabled
+            if (!pairs.some(p => p.enabled)) {
+                showAlert('<i class="fas fa-exclamation-triangle"></i> Please enable at least one trading pair.', 'warning');
+                return;
+            }
+
+            // Check if enabled pairs have strategies
+            const invalidPairs = pairs.filter(p => p.enabled && p.strategies.length === 0);
+            if (invalidPairs.length > 0) {
+                showAlert('<i class="fas fa-exclamation-triangle"></i> All enabled pairs must have at least one strategy selected.', 'warning');
+                return;
+            }
+
+            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+
+            $.ajax({
+                url: '/api/trading-pairs',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ pairs: pairs }),
+                success: function(response) {
+                    showAlert('<i class="fas fa-check-circle"></i> ' + response.message, 'success');
+                    $('#save-pairs-config').prop('disabled', false).html('<i class="fas fa-save"></i> Save Trading Pairs Configuration');
+                },
+                error: function(xhr) {
+                    const error = xhr.responseJSON?.error || 'Failed to save configuration';
+                    showAlert('<i class="fas fa-times-circle"></i> Error: ' + error, 'danger');
+                    $('#save-pairs-config').prop('disabled', false).html('<i class="fas fa-save"></i> Save Trading Pairs Configuration');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

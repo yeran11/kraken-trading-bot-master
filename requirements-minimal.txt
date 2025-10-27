@@ -1,0 +1,20 @@
+# Minimal requirements for Replit
+flask==3.0.0
+flask-cors==4.0.0
+flask-socketio==5.3.5
+flask-sqlalchemy==3.1.1
+python-socketio==5.10.0
+eventlet==0.33.3
+loguru==0.7.2
+python-dotenv==1.0.0
+pandas==2.1.3
+numpy==1.24.3
+requests==2.31.0
+websocket-client==1.6.4
+ccxt==4.1.22
+krakenex==2.2.2
+sqlalchemy==2.0.23
+ta==0.11.0
+aiohttp==3.9.1
+scipy==1.11.4
+scikit-learn==1.3.2

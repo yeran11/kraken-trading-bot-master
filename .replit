@@ -1,0 +1,18 @@
+entrypoint = "run.py"
+modules = ["nodejs-20", "python-3.11"]
+run = "python3 run.py"
+
+[nix]
+channel = "stable-25_05"
+packages = ["cargo", "glibcLocales", "iana-etc", "libiconv", "libxcrypt", "libyaml", "openssl", "pkg-config", "rustc", "xsimd"]
+
+[deployment]
+run = ["python3", "run.py"]
+deploymentTarget = "cloudrun"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[agent]
+expertMode = true

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kraken Trading Bot Dashboard</title>
+
+    <!-- CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/dashboard.css') }}" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-robot"></i> Kraken Trading Bot
+            </a>
+            <div class="navbar-nav flex-row align-items-center ms-auto">
+                <a class="nav-link" href="/settings" title="Settings">
+                    <i class="fas fa-cog"></i> Settings
+                </a>
+                <span id="connection-status" class="badge bg-danger ms-3">
+                    <i class="fas fa-circle"></i> Disconnected
+                </span>
+                <span id="trading-mode" class="badge bg-info ms-2">
+                    <i class="fas fa-flask"></i> Paper Trading
+                </span>
+                <span id="bot-status" class="badge bg-secondary ms-2">
+                    <i class="fas fa-stop-circle"></i> Stopped
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid mt-5 pt-3">
+        <!-- Control Panel -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card control-panel">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <h5 class="mb-0">Bot Control</h5>
+                            </div>
+                            <div class="col-md-6 text-center">
+                                <button id="btn-start" class="btn btn-success btn-lg me-2">
+                                    <i class="fas fa-play"></i> Start Bot
+                                </button>
+                                <button id="btn-stop" class="btn btn-danger btn-lg me-2" disabled>
+                                    <i class="fas fa-stop"></i> Stop Bot
+                                </button>
+                                <button id="btn-emergency-stop" class="btn btn-warning btn-lg">
+                                    <i class="fas fa-exclamation-triangle"></i> Emergency Stop
+                                </button>
+                            </div>
+                            <div class="col-md-3 text-end">
+                                <span class="text-muted">Uptime:</span>
+                                <span id="uptime" class="fw-bold">0:00:00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body">
+                        <h6 class="text-muted">Total Balance</h6>
+                        <h3 id="total-balance">$0.00</h3>
+                        <small class="text-success">
+                            <i class="fas fa-arrow-up"></i> <span id="balance-change">0.00%</span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body">
+                        <h6 class="text-muted">Today's P&L</h6>
+                        <h3 id="daily-pnl" class="text-success">$0.00</h3>
+                        <small class="text-muted">
+                            Win Rate: <span id="win-rate">0%</span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body">
+                        <h6 class="text-muted">Open Positions</h6>
+                        <h3 id="open-positions">0</h3>
+                        <small class="text-muted">
+                            Value: <span id="position-value">$0.00</span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body">
+                        <h6 class="text-muted">Total Trades</h6>
+                        <h3 id="total-trades">0</h3>
+                        <small class="text-muted">
+                            Avg: <span id="avg-trade">$0.00</span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard Area -->
+        <div class="row">
+            <!-- Chart Section -->
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <ul class="nav nav-tabs card-header-tabs">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-chart="portfolio" href="#">Portfolio</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-chart="pnl" href="#">P&L Chart</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-chart="trades" href="#">Trade History</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="main-chart" height="100"></canvas>
+                    </div>
+                </div>
+
+                <!-- Positions Table -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Open Positions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Symbol</th>
+                                        <th>Side</th>
+                                        <th>Size</th>
+                                        <th>Entry Price</th>
+                                        <th>Current Price</th>
+                                        <th>P&L</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="positions-table">
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted">No open positions</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Side Panel -->
+            <div class="col-md-4">
+                <!-- Active Strategies -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Active Strategies</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="strategies-list">
+                            <div class="strategy-item">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="strategy-momentum" checked>
+                                    <label class="form-check-label" for="strategy-momentum">
+                                        Momentum Strategy
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="strategy-item">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="strategy-mean-reversion" checked>
+                                    <label class="form-check-label" for="strategy-mean-reversion">
+                                        Mean Reversion
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="strategy-item">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="strategy-scalping">
+                                    <label class="form-check-label" for="strategy-scalping">
+                                        Scalping
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="strategy-item">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="strategy-grid">
+                                    <label class="form-check-label" for="strategy-grid">
+                                        Grid Trading
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Market Watch -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Market Watch</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="market-watch">
+                            <div class="market-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold">BTC/USD</span>
+                                    <div>
+                                        <span id="btc-price" class="price">$0.00</span>
+                                        <span id="btc-change" class="badge bg-success ms-2">0.00%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="market-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold">ETH/USD</span>
+                                    <div>
+                                        <span id="eth-price" class="price">$0.00</span>
+                                        <span id="eth-change" class="badge bg-success ms-2">0.00%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="market-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold">SOL/USD</span>
+                                    <div>
+                                        <span id="sol-price" class="price">$0.00</span>
+                                        <span id="sol-change" class="badge bg-danger ms-2">0.00%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Trades -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Recent Trades</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="recent-trades">
+                            <p class="text-muted text-center">No recent trades</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Section -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">System Alerts</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="alerts-container">
+                            <div class="alert alert-info" role="alert">
+                                <i class="fas fa-info-circle"></i> System ready. Click "Start Bot" to begin trading.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal fade" id="settingsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Bot Settings</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Settings Form -->
+                    <form id="settings-form">
+                        <h6>Risk Management</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Max Position Size (USD)</label>
+                                <input type="number" class="form-control" id="max-position-size" value="1000">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Max Daily Loss (USD)</label>
+                                <input type="number" class="form-control" id="max-daily-loss" value="500">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Stop Loss (%)</label>
+                                <input type="number" class="form-control" id="stop-loss" value="2" step="0.1">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Take Profit (%)</label>
+                                <input type="number" class="form-control" id="take-profit" value="3" step="0.1">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="save-settings">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Trade Modal -->
+    <div class="modal fade" id="tradeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Manual Trade</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="trade-form">
+                        <div class="mb-3">
+                            <label class="form-label">Symbol</label>
+                            <select class="form-select" id="trade-symbol">
+                                <option value="BTC/USD">BTC/USD</option>
+                                <option value="ETH/USD">ETH/USD</option>
+                                <option value="SOL/USD">SOL/USD</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Side</label>
+                            <select class="form-select" id="trade-side">
+                                <option value="BUY">Buy</option>
+                                <option value="SELL">Sell</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Amount</label>
+                            <input type="number" class="form-control" id="trade-amount" step="0.001">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Order Type</label>
+                            <select class="form-select" id="trade-type">
+                                <option value="MARKET">Market</option>
+                                <option value="LIMIT">Limit</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="price-input" style="display:none;">
+                            <label class="form-label">Price</label>
+                            <input type="number" class="form-control" id="trade-price" step="0.01">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="execute-trade">Execute Trade</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer mt-5 py-3 bg-dark">
+        <div class="container text-center">
+            <span class="text-muted">Kraken Trading Bot v1.0.0 |
+                <a href="/settings">Settings</a> |
+                <a href="#" data-bs-toggle="modal" data-bs-target="#tradeModal">Manual Trade</a> |
+                <a href="#" onclick="downloadLogs()">Download Logs</a>
+            </span>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>
