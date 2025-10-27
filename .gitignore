@@ -50,6 +50,7 @@ env/
 trading_pairs_config.json
 positions.json
 trades.json
+trades_history.json
 *.db
 *.sqlite
 *.sqlite3

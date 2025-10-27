@@ -27,6 +27,10 @@ class TradingEngine:
         self.trades_history = []
         self.config = {}
 
+        # File paths for persistence
+        self.positions_file = 'positions.json'
+        self.trades_file = 'trades_history.json'
+
         logger.info("Trading Engine initialized")
 
     def load_config(self):
@@ -70,6 +74,104 @@ class TradingEngine:
             logger.error(f"Error loading config: {e}")
             self.config = {}
 
+    def save_positions(self):
+        """Save positions to file for persistence across restarts"""
+        try:
+            with open(self.positions_file, 'w') as f:
+                json.dump(self.positions, f, indent=2)
+            logger.debug(f"Saved {len(self.positions)} positions to {self.positions_file}")
+        except Exception as e:
+            logger.error(f"Error saving positions: {e}")
+
+    def load_positions(self):
+        """Load positions from file"""
+        try:
+            if os.path.exists(self.positions_file):
+                with open(self.positions_file, 'r') as f:
+                    self.positions = json.load(f)
+                logger.info(f"Loaded {len(self.positions)} positions from file")
+            else:
+                logger.info("No saved positions file found")
+        except Exception as e:
+            logger.error(f"Error loading positions: {e}")
+            self.positions = {}
+
+    def save_trades(self):
+        """Save trade history to file"""
+        try:
+            with open(self.trades_file, 'w') as f:
+                json.dump(self.trades_history, f, indent=2)
+            logger.debug(f"Saved {len(self.trades_history)} trades to {self.trades_file}")
+        except Exception as e:
+            logger.error(f"Error saving trades: {e}")
+
+    def load_trades(self):
+        """Load trade history from file"""
+        try:
+            if os.path.exists(self.trades_file):
+                with open(self.trades_file, 'r') as f:
+                    self.trades_history = json.load(f)
+                logger.info(f"Loaded {len(self.trades_history)} trades from file")
+            else:
+                logger.info("No saved trades file found")
+        except Exception as e:
+            logger.error(f"Error loading trades: {e}")
+            self.trades_history = []
+
+    def sync_positions_from_kraken(self):
+        """Check Kraken for open positions and sync with local state"""
+        try:
+            logger.info("Syncing positions from Kraken...")
+
+            # Fetch balance to see what we hold
+            balance = self.exchange.fetch_balance()
+
+            # Check enabled pairs for holdings
+            enabled_pairs = self._get_enabled_pairs()
+
+            for pair_config in enabled_pairs:
+                symbol = pair_config['symbol']
+
+                # Extract base currency (e.g., "BTC" from "BTC/USD")
+                base_currency = symbol.split('/')[0]
+
+                # Check if we have a balance in this currency
+                if base_currency in balance['total'] and balance['total'][base_currency] > 0:
+                    quantity = balance['total'][base_currency]
+
+                    # If not already in our tracked positions, add it
+                    if symbol not in self.positions:
+                        logger.warning(f"Found untracked position on Kraken: {quantity} {symbol}")
+
+                        # Try to get current price to estimate entry
+                        try:
+                            ticker = self.exchange.fetch_ticker(symbol)
+                            current_price = ticker['last']
+
+                            # We don't know the actual entry price, so use current price
+                            # This isn't perfect but prevents errors
+                            self.positions[symbol] = {
+                                'entry_price': current_price,
+                                'quantity': quantity,
+                                'usd_invested': current_price * quantity,
+                                'entry_time': datetime.now().isoformat(),
+                                'order_id': 'recovered',
+                                'note': 'Position recovered from Kraken on startup'
+                            }
+
+                            logger.info(f"Recovered position: {symbol} qty={quantity} @ ${current_price}")
+
+                        except Exception as e:
+                            logger.error(f"Error recovering position for {symbol}: {e}")
+
+            # Save synced positions
+            self.save_positions()
+
+            logger.info(f"Position sync complete. Tracking {len(self.positions)} positions")
+
+        except Exception as e:
+            logger.error(f"Error syncing positions from Kraken: {e}")
+
     def start(self):
         """Start the trading engine"""
         if self.is_running:
@@ -77,6 +179,10 @@ class TradingEngine:
             return False
 
         self.load_config()
+        self.load_positions()  # Load saved positions from file
+        self.load_trades()     # Load trade history from file
+        self.sync_positions_from_kraken()  # Sync with Kraken for any missing positions
+
         self.is_running = True
 
         # Start trading loop in background thread
@@ -366,6 +472,10 @@ class TradingEngine:
                 'timestamp': datetime.now().isoformat()
             })
 
+            # Save positions and trades to file
+            self.save_positions()
+            self.save_trades()
+
             logger.success(f"✅ BUY order executed: {symbol} at ${price:.2f}")
 
         except Exception as e:
@@ -401,6 +511,10 @@ class TradingEngine:
                 'reason': reason,
                 'timestamp': datetime.now().isoformat()
             })
+
+            # Save positions and trades to file
+            self.save_positions()
+            self.save_trades()
 
             logger.success(f"✅ SELL order executed: {symbol} at ${price:.2f} | P&L: ${pnl:.2f} ({pnl_percent:.2f}%)")
 

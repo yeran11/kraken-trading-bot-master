@@ -375,41 +375,68 @@ def api_positions():
     global trading_engine
 
     if not trading_engine:
+        print("DEBUG: No trading engine instance")
         return jsonify([])
 
     try:
         positions = trading_engine.get_positions()
+        print(f"DEBUG: Got {len(positions)} positions from engine: {list(positions.keys())}")
 
         # Convert to dashboard format
         position_list = []
         for symbol, pos in positions.items():
-            # Fetch current price
-            import ccxt
-            exchange = ccxt.kraken()
-            ticker = exchange.fetch_ticker(symbol)
-            current_price = ticker['last']
+            try:
+                print(f"DEBUG: Processing position for {symbol}")
 
-            entry_price = pos['entry_price']
-            quantity = pos['quantity']
+                # Fetch current price
+                import ccxt
+                from dotenv import load_dotenv
+                load_dotenv()
 
-            # Calculate P&L
-            unrealized_pnl = (current_price - entry_price) * quantity
-            pnl_percent = ((current_price - entry_price) / entry_price) * 100
+                api_key = os.getenv('KRAKEN_API_KEY', '')
+                api_secret = os.getenv('KRAKEN_API_SECRET', '')
 
-            position_list.append({
-                'symbol': symbol,
-                'side': 'long',
-                'quantity': quantity,
-                'entry_price': entry_price,
-                'current_price': current_price,
-                'unrealized_pnl': unrealized_pnl,
-                'pnl_percent': pnl_percent,
-                'entry_time': pos['entry_time']
-            })
+                exchange = ccxt.kraken({
+                    'apiKey': api_key,
+                    'secret': api_secret,
+                    'enableRateLimit': True
+                })
 
+                ticker = exchange.fetch_ticker(symbol)
+                current_price = ticker['last']
+                print(f"DEBUG: Current price for {symbol}: ${current_price}")
+
+                entry_price = pos['entry_price']
+                quantity = pos['quantity']
+
+                # Calculate P&L
+                unrealized_pnl = (current_price - entry_price) * quantity
+                pnl_percent = ((current_price - entry_price) / entry_price) * 100
+
+                position_list.append({
+                    'symbol': symbol,
+                    'side': 'long',
+                    'quantity': quantity,
+                    'entry_price': entry_price,
+                    'current_price': current_price,
+                    'unrealized_pnl': unrealized_pnl,
+                    'pnl_percent': pnl_percent,
+                    'entry_time': pos['entry_time']
+                })
+
+                print(f"DEBUG: Added position: {symbol} P&L: ${unrealized_pnl:.2f} ({pnl_percent:.2f}%)")
+
+            except Exception as e:
+                print(f"ERROR: Failed to process position {symbol}: {e}")
+                continue
+
+        print(f"DEBUG: Returning {len(position_list)} positions to dashboard")
         return jsonify(position_list)
 
     except Exception as e:
+        print(f"ERROR in api_positions: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify([])
 
 @app.route('/api/start', methods=['POST'])
