@@ -425,18 +425,54 @@ class TradingEngine:
                 std_dev = self._calculate_std(closes[-20:])
                 upper_band = sma_20 + (2 * std_dev)
                 lower_band = sma_20 - (2 * std_dev)
+                middle_band = sma_20
 
                 if action_type == 'BUY':
-                    # Buy when price drops below lower band
+                    # Buy when price drops below lower band (oversold)
                     if current_price < lower_band:
-                        logger.info(f"{symbol} Mean Reversion BUY: Price ${current_price:.2f} < Lower Band ${lower_band:.2f}")
+                        deviation = ((current_price - lower_band) / lower_band) * 100
+                        logger.info(f"{symbol} Mean Reversion BUY: Price ${current_price:.6f} < Lower Band ${lower_band:.6f} (Deviation: {deviation:.2f}%)")
                         return True
+                    else:
+                        logger.debug(f"{symbol} Mean Reversion BUY: Not oversold. Price: ${current_price:.6f}, Lower Band: ${lower_band:.6f}")
 
                 elif action_type == 'SELL':
-                    # Sell when price rises above upper band
-                    if current_price > upper_band:
-                        logger.info(f"{symbol} Mean Reversion SELL: Price ${current_price:.2f} > Upper Band ${upper_band:.2f}")
-                        return True
+                    # CRITICAL FIX: Sell when price returns to middle or above
+                    # Don't wait for upper band - that's too extreme!
+                    if symbol in self.positions:
+                        entry_price = self.positions[symbol]['entry_price']
+
+                        # Check minimum hold time (at least 10 minutes)
+                        entry_time_str = self.positions[symbol].get('entry_time', '')
+                        if entry_time_str:
+                            from datetime import datetime
+                            entry_time = datetime.fromisoformat(entry_time_str)
+                            hold_minutes = (datetime.now() - entry_time).total_seconds() / 60
+
+                            if hold_minutes < 10:
+                                logger.debug(f"{symbol} Mean Reversion SELL: Too soon! Hold time: {hold_minutes:.1f} min (need 10 min)")
+                                return False
+
+                        # Calculate profit
+                        profit_percent = ((current_price - entry_price) / entry_price) * 100
+
+                        # SELL if any of these conditions:
+                        # 1. Price reached middle band AND profit >= 1.5%
+                        # 2. Price reached upper band (extreme overbought)
+                        # 3. Profit >= 2.5% (good profit regardless of bands)
+
+                        if current_price >= middle_band and profit_percent >= 1.5:
+                            logger.info(f"{symbol} Mean Reversion SELL: Price returned to middle - ${current_price:.6f} >= ${middle_band:.6f}, Profit: {profit_percent:.2f}%")
+                            return True
+                        elif current_price > upper_band:
+                            logger.info(f"{symbol} Mean Reversion SELL: Extreme overbought - Price ${current_price:.6f} > Upper Band ${upper_band:.6f}, Profit: {profit_percent:.2f}%")
+                            return True
+                        elif profit_percent >= 2.5:
+                            logger.info(f"{symbol} Mean Reversion SELL: Good profit target reached - {profit_percent:.2f}%")
+                            return True
+                        else:
+                            logger.debug(f"{symbol} Mean Reversion SELL: Waiting for reversion. Price: ${current_price:.6f}, Middle: ${middle_band:.6f}, Profit: {profit_percent:.2f}%")
+                            return False
 
             if 'scalping' in strategies:
                 # Scalping: quick small profits
