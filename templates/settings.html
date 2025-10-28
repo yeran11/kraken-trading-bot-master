@@ -609,6 +609,11 @@
                                 <label class="form-label"><strong>Strategies:</strong></label>
                                 <div class="pair-strategies">
                                     <div class="form-check form-check-inline">
+                                        <input class="form-check-input strategy-check" type="checkbox" value="macd_supertrend"
+                                               ${config.strategies.includes('macd_supertrend') ? 'checked' : ''}>
+                                        <label class="form-check-label" style="font-size: 0.9em;">MACD+ST</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
                                         <input class="form-check-input strategy-check" type="checkbox" value="momentum"
                                                ${config.strategies.includes('momentum') ? 'checked' : ''}>
                                         <label class="form-check-label" style="font-size: 0.9em;">Momentum</label>
@@ -760,6 +765,7 @@
                 selectedPairs.forEach(pair => {
                     const strategyBadges = pair.strategies.map(s => {
                         const shortNames = {
+                            'macd_supertrend': 'MS',
                             'momentum': 'M',
                             'mean_reversion': 'MR',
                             'scalping': 'S'
