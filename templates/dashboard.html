@@ -8,6 +8,12 @@
     <!-- CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Terminal Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <link href="{{ url_for('static', filename='css/dashboard.css') }}" rel="stylesheet">
 
     <!-- Chart.js -->
@@ -52,13 +58,13 @@
                                 <h5 class="mb-0">Bot Control</h5>
                             </div>
                             <div class="col-md-6 text-center">
-                                <button id="btn-start" class="btn btn-success btn-lg me-2">
+                                <button id="btn-start" class="btn btn-neon-green btn-lg me-2">
                                     <i class="fas fa-play"></i> Start Bot
                                 </button>
-                                <button id="btn-stop" class="btn btn-danger btn-lg me-2" disabled>
+                                <button id="btn-stop" class="btn btn-neon-cyan btn-lg me-2" disabled>
                                     <i class="fas fa-stop"></i> Stop Bot
                                 </button>
-                                <button id="btn-emergency-stop" class="btn btn-warning btn-lg">
+                                <button id="btn-emergency-stop" class="btn btn-neon-purple btn-lg">
                                     <i class="fas fa-exclamation-triangle"></i> Emergency Stop
                                 </button>
                             </div>
@@ -115,6 +121,164 @@
                         <small class="text-muted">
                             Avg: <span id="avg-trade">$0.00</span>
                         </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🤖 MASTER TRADER COMPONENTS -->
+        <div class="row mb-4">
+            <!-- Terminal Live Feed -->
+            <div class="col-md-6 mb-4">
+                <div class="card holo-card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-terminal"></i> LIVE TERMINAL FEED
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="terminal-feed" id="terminal-feed">
+                            <div class="terminal-line">
+                                <span class="terminal-timestamp">[SYSTEM]</span>
+                                <span>⚡ MASTER TRADER INITIALIZED...</span>
+                            </div>
+                            <div class="terminal-line">
+                                <span class="terminal-timestamp">[SYSTEM]</span>
+                                <span>🔗 Connecting to Kraken exchange...</span>
+                            </div>
+                            <div class="terminal-line">
+                                <span class="terminal-timestamp">[SYSTEM]</span>
+                                <span class="terminal-buy">✓ CONNECTION ESTABLISHED</span>
+                            </div>
+                            <div class="terminal-line">
+                                <span class="terminal-timestamp">[SYSTEM]</span>
+                                <span>🤖 AI BRAIN ONLINE - AWAITING COMMANDS...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Brain Status -->
+            <div class="col-md-6 mb-4">
+                <div class="ai-brain-card">
+                    <div class="ai-brain-header">
+                        <div class="ai-brain-icon">
+                            <i class="fas fa-brain pulse"></i>
+                        </div>
+                        <div class="ai-brain-title">
+                            AI DECISION ENGINE
+                        </div>
+                    </div>
+
+                    <div class="ai-status-item">
+                        <span class="ai-status-label">Status</span>
+                        <span class="ai-status-value">ANALYZING</span>
+                    </div>
+
+                    <div class="ai-status-item">
+                        <span class="ai-status-label">Market Sentiment</span>
+                        <span class="ai-status-value" id="ai-sentiment">NEUTRAL</span>
+                    </div>
+
+                    <div class="ai-status-item">
+                        <span class="ai-status-label">Signal Confidence</span>
+                        <span class="ai-status-value" id="ai-confidence-value">0%</span>
+                        <div class="ai-confidence-bar">
+                            <div class="ai-confidence-fill" id="ai-confidence-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="ai-status-item">
+                        <span class="ai-status-label">Volatility Index</span>
+                        <span class="ai-status-value" id="ai-volatility">MODERATE</span>
+                    </div>
+
+                    <div class="ai-status-item">
+                        <span class="ai-status-label">Recommended Action</span>
+                        <span class="ai-status-value" id="ai-action">HOLD</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Strategy Performance Matrix -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-line"></i> STRATEGY PERFORMANCE MATRIX
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="strategy-matrix">
+                                <thead>
+                                    <tr>
+                                        <th>Strategy</th>
+                                        <th>Win %</th>
+                                        <th>P&L</th>
+                                        <th>Trades</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="strategy-matrix-body">
+                                    <tr>
+                                        <td class="strategy-name">
+                                            <span class="strategy-icon">🎯</span> MACD+Supertrend
+                                        </td>
+                                        <td class="win-rate">68%</td>
+                                        <td class="pnl-positive">+$0.00</td>
+                                        <td>0</td>
+                                        <td>
+                                            <span class="strategy-status active">
+                                                <i class="fas fa-circle pulse"></i> ACTIVE
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="strategy-name">
+                                            <span class="strategy-icon">📈</span> Momentum
+                                        </td>
+                                        <td class="win-rate">72%</td>
+                                        <td class="pnl-positive">+$0.00</td>
+                                        <td>0</td>
+                                        <td>
+                                            <span class="strategy-status active">
+                                                <i class="fas fa-circle pulse"></i> ACTIVE
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="strategy-name">
+                                            <span class="strategy-icon">🔄</span> Mean Reversion
+                                        </td>
+                                        <td class="win-rate">45%</td>
+                                        <td class="pnl-negative">-$0.00</td>
+                                        <td>0</td>
+                                        <td>
+                                            <span class="strategy-status paused">
+                                                <i class="fas fa-pause"></i> PAUSED
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="strategy-name">
+                                            <span class="strategy-icon">⚡</span> Scalping
+                                        </td>
+                                        <td class="win-rate">81%</td>
+                                        <td class="pnl-positive">+$0.00</td>
+                                        <td>0</td>
+                                        <td>
+                                            <span class="strategy-status active">
+                                                <i class="fas fa-circle pulse"></i> ACTIVE
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -392,9 +556,61 @@
         </div>
     </footer>
 
+    <!-- Cyber Grid Overlay -->
+    <div class="grid-overlay"></div>
+
     <!-- JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+
+    <!-- Terminal Feed Auto-Update -->
+    <script>
+        // Terminal feed demo updates
+        function addTerminalLine(message, type = 'info') {
+            const feed = document.getElementById('terminal-feed');
+            if (!feed) return;
+
+            const timestamp = new Date().toLocaleTimeString('en-US', {hour12: false});
+            const line = document.createElement('div');
+            line.className = 'terminal-line';
+
+            let className = '';
+            if (type === 'buy') className = 'terminal-buy';
+            else if (type === 'sell') className = 'terminal-sell';
+            else if (type === 'alert') className = 'terminal-alert';
+            else if (type === 'signal') className = 'terminal-signal';
+
+            line.innerHTML = `
+                <span class="terminal-timestamp">[${timestamp}]</span>
+                <span class="${className}">${message}</span>
+            `;
+
+            feed.appendChild(line);
+            feed.scrollTop = feed.scrollHeight;
+
+            // Keep only last 100 lines
+            while (feed.children.length > 100) {
+                feed.removeChild(feed.firstChild);
+            }
+        }
+
+        // Simulate AI confidence updates
+        function updateAI() {
+            const confidence = Math.floor(Math.random() * 40 + 60); // 60-100%
+            const sentiments = ['BULLISH', 'BEARISH', 'NEUTRAL'];
+            const sentiment = sentiments[Math.floor(Math.random() * sentiments.length)];
+            const actions = ['BUY', 'SELL', 'HOLD'];
+            const action = actions[Math.floor(Math.random() * actions.length)];
+
+            document.getElementById('ai-confidence-value').textContent = confidence + '%';
+            document.getElementById('ai-confidence-bar').style.width = confidence + '%';
+            document.getElementById('ai-sentiment').textContent = sentiment;
+            document.getElementById('ai-action').textContent = action;
+        }
+
+        // Update AI every 10 seconds
+        setInterval(updateAI, 10000);
+    </script>
 </body>
 </html>
