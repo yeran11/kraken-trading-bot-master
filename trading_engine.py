@@ -1132,6 +1132,23 @@ class TradingEngine:
                     logger.error(f"Invalid price for {symbol}: {current_price}")
                     continue
 
+                # DUST POSITION CHECK - Auto-remove worthless positions
+                position_value_usd = quantity * current_price
+                MIN_POSITION_VALUE = 1.0  # $1 minimum
+
+                if position_value_usd < MIN_POSITION_VALUE:
+                    logger.warning(f"🗑️ DUST POSITION DETECTED: {symbol}")
+                    logger.warning(f"   Position value: ${position_value_usd:.6f} (minimum: ${MIN_POSITION_VALUE:.2f})")
+                    logger.warning(f"   Quantity: {quantity:.8f} at ${current_price:.6f}")
+                    logger.warning(f"   This position is too small to trade - REMOVING from tracking")
+
+                    # Remove dust position
+                    del self.positions[symbol]
+                    self.save_positions()
+
+                    logger.success(f"✅ Dust position {symbol} removed automatically")
+                    continue  # Skip to next position
+
                 # Calculate P&L
                 pnl = (current_price - entry_price) * quantity
                 pnl_percent = ((current_price - entry_price) / entry_price) * 100
