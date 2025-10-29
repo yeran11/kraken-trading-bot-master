@@ -17,15 +17,18 @@ class DeepSeekValidator:
     def __init__(self, api_key=None):
         self.api_key = api_key or os.getenv('DEEPSEEK_API_KEY')
         self.base_url = "https://api.deepseek.com/v1"
-        self.model = "deepseek-chat"
+
+        # 🧠 UPGRADED: Using DeepSeek-R1 Reasoning Model for superior trading analysis
+        self.model = "deepseek-reasoner"  # Advanced reasoning with Chain-of-Thought
         self.temperature = 0.3  # Lower = more consistent
-        self.max_tokens = 500
+        self.max_tokens = 2000  # Increased for reasoning output (thinking + answer)
 
         if not self.api_key:
             logger.warning("⚠️  DeepSeek API key not found. Set DEEPSEEK_API_KEY in .env")
             logger.info("Validator will run in demo mode")
         else:
-            logger.success("✓ DeepSeek validator initialized")
+            logger.success("✓ DeepSeek-R1 Reasoning Model initialized")
+            logger.info("🧠 Using advanced Chain-of-Thought reasoning for trading decisions")
 
     async def validate_signal(
         self,
@@ -106,7 +109,7 @@ class DeepSeekValidator:
                 emoji = "🟢" if change > 0 else "🔴"
                 price_action += f"  {emoji} ${candle['close']:.2f} ({change:+.2f}%)\n"
 
-        prompt = f"""You are an expert cryptocurrency trader analyzing {symbol}.
+        prompt = f"""You are an expert cryptocurrency trader with deep analytical reasoning capabilities. Analyze {symbol} and provide a trading recommendation.
 
 **CURRENT MARKET DATA:**
 - Current Price: ${current_price:.2f}
@@ -122,28 +125,35 @@ class DeepSeekValidator:
 
 {price_action}
 
-**YOUR TASK:**
-Analyze this data and provide a trading recommendation. Consider:
-1. Do the technical indicators support a trade?
-2. Is the sentiment aligned with the signals?
-3. Are there any conflicting signals?
-4. What are the main risk factors?
+**REASONING INSTRUCTIONS:**
+Think step-by-step through the following:
 
-**RESPOND IN THIS EXACT JSON FORMAT:**
+1. **Technical Signal Strength**: Are the technical indicators showing clear consensus or conflict?
+2. **Sentiment Alignment**: Does market sentiment support or contradict the technical signals?
+3. **Risk Assessment**: What could go wrong with each potential action (BUY/SELL/HOLD)?
+4. **Historical Context**: Based on the recent price action, what's the momentum?
+5. **Probability Weighting**: What's the likelihood of success for each action?
+6. **Final Decision**: Which action offers the best risk/reward ratio?
+
+After your reasoning, provide your final recommendation in this JSON format:
 {{
     "action": "BUY" or "SELL" or "HOLD",
     "confidence": 0-100,
-    "reasoning": "2-3 sentences explaining your decision",
+    "reasoning": "2-3 sentences explaining your decision based on your analysis",
     "risks": ["risk1", "risk2", "risk3"]
 }}
 
-Be conservative. Only recommend BUY/SELL if you have high confidence (>70%).
+**IMPORTANT GUIDELINES:**
+- Be conservative: Only recommend BUY/SELL if confidence is >70%
+- Consider that this is REAL MONEY - prioritize capital preservation
+- If signals are mixed or unclear, default to HOLD
+- Factor in both upside potential AND downside risk
 """
 
         return prompt
 
     async def _call_deepseek_api(self, prompt: str):
-        """Call DeepSeek API"""
+        """Call DeepSeek-R1 Reasoning API"""
         try:
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
@@ -155,7 +165,7 @@ Be conservative. Only recommend BUY/SELL if you have high confidence (>70%).
                 "messages": [
                     {
                         "role": "system",
-                        "content": "You are a professional cryptocurrency trading analyst. Provide clear, actionable advice based on technical analysis."
+                        "content": "You are a professional cryptocurrency trading analyst with deep reasoning capabilities. Think through the analysis step-by-step, considering all factors before making a recommendation."
                     },
                     {
                         "role": "user",
@@ -163,32 +173,67 @@ Be conservative. Only recommend BUY/SELL if you have high confidence (>70%).
                     }
                 ],
                 "temperature": self.temperature,
-                "max_tokens": self.max_tokens,
-                "response_format": {"type": "json_object"}
+                "max_tokens": self.max_tokens
+                # NOTE: Reasoning model doesn't use response_format - it thinks first, then responds
             }
 
+            logger.debug(f"🧠 Calling DeepSeek-R1 reasoning model...")
             response = requests.post(
                 f"{self.base_url}/chat/completions",
                 headers=headers,
                 json=payload,
-                timeout=30
+                timeout=60  # Increased timeout for reasoning (thinking takes time)
             )
 
             response.raise_for_status()
             data = response.json()
 
-            ai_response = data['choices'][0]['message']['content']
-            return ai_response
+            message = data['choices'][0]['message']
+
+            # Extract reasoning process (Chain-of-Thought)
+            reasoning_content = message.get('reasoning_content', '')
+            final_answer = message.get('content', '')
+
+            # Log the reasoning process
+            if reasoning_content:
+                logger.debug(f"🤔 AI Thinking Process:\n{reasoning_content[:500]}...")  # First 500 chars
+
+            logger.debug(f"💡 AI Final Answer: {final_answer[:200]}...")
+
+            # Return both reasoning and answer
+            return {
+                'reasoning': reasoning_content,
+                'answer': final_answer
+            }
 
         except requests.exceptions.RequestException as e:
-            logger.error(f"DeepSeek API error: {e}")
+            logger.error(f"DeepSeek-R1 API error: {e}")
             raise
 
-    def _parse_ai_response(self, response_text: str):
-        """Parse AI response JSON"""
+    def _parse_ai_response(self, response_data):
+        """Parse AI response from DeepSeek-R1 reasoning model"""
         try:
-            # Parse JSON response
-            data = json.loads(response_text)
+            # Handle dict response from reasoning model
+            if isinstance(response_data, dict):
+                reasoning_process = response_data.get('reasoning', '')
+                answer_text = response_data.get('answer', '')
+            else:
+                # Fallback for string response
+                reasoning_process = ''
+                answer_text = response_data
+
+            # Try to parse JSON from answer
+            try:
+                # Look for JSON in the answer
+                data = json.loads(answer_text)
+            except json.JSONDecodeError:
+                # Try to extract JSON if wrapped in markdown or text
+                import re
+                json_match = re.search(r'\{[^}]+\}', answer_text)
+                if json_match:
+                    data = json.loads(json_match.group())
+                else:
+                    raise ValueError("No JSON found in response")
 
             action = data.get('action', 'HOLD').upper()
             confidence = float(data.get('confidence', 50))
@@ -202,18 +247,28 @@ Be conservative. Only recommend BUY/SELL if you have high confidence (>70%).
             # Clamp confidence to 0-100
             confidence = max(0, min(100, confidence))
 
+            # Combine Chain-of-Thought reasoning with final reasoning
+            full_reasoning = reasoning
+            if reasoning_process:
+                # Include thinking process summary
+                thinking_summary = reasoning_process[:300] + "..." if len(reasoning_process) > 300 else reasoning_process
+                full_reasoning = f"[Deep Analysis] {thinking_summary}\n\n[Decision] {reasoning}"
+
             return {
                 'action': action,
                 'confidence': confidence,
-                'reasoning': reasoning,
+                'reasoning': full_reasoning,
                 'risks': risks,
-                'source': 'deepseek'
+                'source': 'deepseek-r1',
+                'thinking_process': reasoning_process  # Full CoT for debugging
             }
 
-        except json.JSONDecodeError as e:
+        except Exception as e:
             logger.error(f"Failed to parse AI response: {e}")
             # Try to extract action from text
+            response_text = str(response_data)
             response_upper = response_text.upper()
+
             if 'BUY' in response_upper:
                 action = 'BUY'
             elif 'SELL' in response_upper:
@@ -224,9 +279,9 @@ Be conservative. Only recommend BUY/SELL if you have high confidence (>70%).
             return {
                 'action': action,
                 'confidence': 50,
-                'reasoning': response_text[:200],
+                'reasoning': response_text[:200] if isinstance(response_text, str) else 'Parse error',
                 'risks': [],
-                'source': 'deepseek_fallback'
+                'source': 'deepseek-r1-fallback'
             }
 
     def _demo_response(self, symbol: str, technical_signals: dict):
