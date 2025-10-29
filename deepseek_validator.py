@@ -107,12 +107,12 @@ class DeepSeekValidator:
             for i, candle in enumerate(candles):
                 change = ((candle['close'] - candle['open']) / candle['open'] * 100)
                 emoji = "🟢" if change > 0 else "🔴"
-                price_action += f"  {emoji} ${candle['close']:.2f} ({change:+.2f}%)\n"
+                price_action += f"  {emoji} ${candle['close']:.6f} ({change:+.2f}%)\n"
 
         prompt = f"""You are an expert cryptocurrency trader with deep analytical reasoning capabilities. Analyze {symbol} and provide a trading recommendation.
 
 **CURRENT MARKET DATA:**
-- Current Price: ${current_price:.2f}
+- Current Price: ${current_price:.6f}
 - Trading Pair: {symbol}
 - Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC
 

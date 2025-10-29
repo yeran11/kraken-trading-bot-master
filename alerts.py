@@ -269,11 +269,11 @@ class AlertManager:
             message = f"Order executed successfully\n"
             message += f"Symbol: {symbol}\n"
             message += f"Side: {side}\n"
-            message += f"Price: ${price:.2f}\n"
+            message += f"Price: ${price:.6f}\n"
             message += f"Quantity: {quantity:.4f}\n"
 
             if pnl != 0:
-                message += f"P&L: ${pnl:.2f} ({pnl/price*100:.2f}%)\n"
+                message += f"P&L: ${pnl:.6f} ({pnl/price*100:.2f}%)\n"
 
             details = {
                 'Strategy': trade.get('strategy', 'Manual'),
@@ -307,9 +307,9 @@ class AlertManager:
                 level = 'info'
 
             message = f"Position {action} for {symbol}\n"
-            message += f"Entry: ${position.get('entry_price', 0):.2f}\n"
-            message += f"Current: ${position.get('current_price', 0):.2f}\n"
-            message += f"P&L: ${position.get('unrealized_pnl', 0):.2f}\n"
+            message += f"Entry: ${position.get('entry_price', 0):.6f}\n"
+            message += f"Current: ${position.get('current_price', 0):.6f}\n"
+            message += f"P&L: ${position.get('unrealized_pnl', 0):.6f}\n"
 
             self.send_alert(title, message, level, 'position')
 
@@ -331,13 +331,13 @@ class AlertManager:
 
             if risk_type == 'daily_loss':
                 title = "Daily Loss Limit Reached"
-                message = f"Daily loss: ${abs(details.get('loss', 0)):.2f}"
+                message = f"Daily loss: ${abs(details.get('loss', 0)):.6f}"
             elif risk_type == 'drawdown':
                 title = "Maximum Drawdown Exceeded"
                 message = f"Current drawdown: {details.get('drawdown', 0):.2f}%"
             elif risk_type == 'exposure':
                 title = "High Exposure Warning"
-                message = f"Current exposure: ${details.get('exposure', 0):.2f}"
+                message = f"Current exposure: ${details.get('exposure', 0):.6f}"
             elif risk_type == 'consecutive_losses':
                 title = "Consecutive Losses Alert"
                 message = f"Consecutive losses: {details.get('count', 0)}"
@@ -378,9 +378,9 @@ class AlertManager:
             message += f"Total Trades: {metrics.get('total_trades', 0)}\n"
             message += f"Winning Trades: {metrics.get('winning_trades', 0)}\n"
             message += f"Win Rate: {metrics.get('win_rate', 0):.1f}%\n"
-            message += f"Total P&L: ${metrics.get('total_pnl', 0):.2f}\n"
-            message += f"Best Trade: ${metrics.get('best_trade', 0):.2f}\n"
-            message += f"Worst Trade: ${metrics.get('worst_trade', 0):.2f}\n"
+            message += f"Total P&L: ${metrics.get('total_pnl', 0):.6f}\n"
+            message += f"Best Trade: ${metrics.get('best_trade', 0):.6f}\n"
+            message += f"Worst Trade: ${metrics.get('worst_trade', 0):.6f}\n"
             message += f"Max Drawdown: {metrics.get('max_drawdown', 0):.2f}%\n"
 
             self.send_alert(title, message, 'info', 'performance', metrics)
