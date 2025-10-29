@@ -352,7 +352,7 @@ class TradingEngine:
         signal = self._evaluate_strategies(symbol, current_price, strategies, 'BUY')
 
         if signal:
-            logger.info(f"🟢 STRATEGY SIGNAL: {symbol} at ${current_price:.2f}")
+            logger.info(f"🟢 STRATEGY SIGNAL: {symbol} at ${current_price:.6f}")
 
             # AI VALIDATION - Master Trader validates the signal
             if self.ai_enabled:
@@ -415,7 +415,7 @@ class TradingEngine:
                     logger.warning("Proceeding without AI validation (fallback to strategy only)")
 
             # EXECUTE BUY ORDER
-            logger.info(f"🚀 EXECUTING BUY: {symbol} at ${current_price:.2f}")
+            logger.info(f"🚀 EXECUTING BUY: {symbol} at ${current_price:.6f}")
 
             # Determine which strategy triggered (for trailing stop logic)
             strategy_name = 'unknown'
@@ -454,7 +454,7 @@ class TradingEngine:
         signal = self._evaluate_strategies(symbol, current_price, strategies, 'SELL')
 
         if signal:
-            logger.info(f"🟡 SELL SIGNAL: {symbol} at ${current_price:.2f} (P&L: {pnl_percent:.2f}%)")
+            logger.info(f"🟡 SELL SIGNAL: {symbol} at ${current_price:.6f} (P&L: {pnl_percent:.2f}%)")
             self._execute_sell(symbol, current_price, "STRATEGY")
 
     def _evaluate_strategies(self, symbol, current_price, strategies, action_type):
@@ -489,7 +489,7 @@ class TradingEngine:
                     sma_diff_percent = ((sma_5 - sma_20) / sma_20) * 100
 
                     if sma_5 > sma_20 and current_price > sma_5 and sma_diff_percent >= 0.5:
-                        logger.info(f"{symbol} Momentum BUY signal: Price ${current_price:.2f} > SMA5 ${sma_5:.2f} > SMA20 ${sma_20:.2f} (Gap: {sma_diff_percent:.2f}%)")
+                        logger.info(f"{symbol} Momentum BUY signal: Price ${current_price:.6f} > SMA5 ${sma_5:.6f} > SMA20 ${sma_20:.6f} (Gap: {sma_diff_percent:.2f}%)")
                         return True
                     else:
                         logger.debug(f"{symbol} Momentum BUY: Not strong enough. SMA5/SMA20 gap: {sma_diff_percent:.2f}% (need 0.5%+)")
@@ -582,7 +582,7 @@ class TradingEngine:
                 if action_type == 'BUY':
                     # Buy on bigger dips (changed from 0.5% to 1.5%)
                     if current_price < sma_10 * 0.985:  # 1.5% below 10-period average
-                        logger.info(f"{symbol} Scalping BUY: Price ${current_price:.2f} dipped 1.5%+ below SMA10")
+                        logger.info(f"{symbol} Scalping BUY: Price ${current_price:.6f} dipped 1.5%+ below SMA10")
                         return True
                     else:
                         logger.debug(f"{symbol} Scalping BUY: Dip not significant enough")
