@@ -46,15 +46,38 @@ class TradingEngine:
         self.ai_enabled = os.getenv('AI_ENSEMBLE_ENABLED', 'true').lower() == 'true'
         self.ai_min_confidence = float(os.getenv('AI_MIN_CONFIDENCE', '0.65'))
 
-        logger.success("✓ Trading Engine initialized with AI Ensemble")
-        if deepseek_key:
-            logger.info("🧠 AI Ensemble: FULL MODE (DeepSeek enabled)")
+        logger.success("=" * 70)
+        logger.success("✓ TRADING ENGINE INITIALIZED")
+        logger.success("=" * 70)
+
+        # CRITICAL: Log AI configuration prominently
+        if self.ai_enabled:
+            logger.success("🧠 AI ENSEMBLE: ENABLED ✅")
+            logger.success("   ⚡ DeepSeek AI will validate ALL trading decisions")
+            logger.success(f"   🎯 Minimum confidence threshold: {self.ai_min_confidence*100:.0f}%")
+            if deepseek_key:
+                logger.success("   🔑 DeepSeek API Key: CONFIGURED ✅")
+                logger.success("   🚀 FULL AI MODE: Real-time reasoning with DeepSeek-R1")
+            else:
+                logger.warning("   ⚠️  DeepSeek API Key: NOT SET")
+                logger.warning("   📊 DEMO MODE: Using fallback AI (Set DEEPSEEK_API_KEY for full power)")
         else:
-            logger.warning("🧠 AI Ensemble: DEMO MODE (Set DEEPSEEK_API_KEY for full AI)")
+            logger.critical("=" * 70)
+            logger.critical("🚨 WARNING: AI ENSEMBLE DISABLED! 🚨")
+            logger.critical("=" * 70)
+            logger.critical("⚠️  Trading WITHOUT AI validation is EXTREMELY RISKY")
+            logger.critical("⚠️  All trades will be BLOCKED until AI is enabled")
+            logger.critical("⚠️  Set AI_ENSEMBLE_ENABLED=true in .env to enable protection")
+            logger.critical("=" * 70)
 
         # Log AI health
         ai_health = self.ai_ensemble.get_model_health()
-        logger.info(f"AI Health: {ai_health['overall']} - {ai_health}")
+        logger.info(f"📊 AI Health Check: {ai_health['overall']}")
+        logger.info(f"   Sentiment Model: {ai_health['sentiment']}")
+        logger.info(f"   Technical Analysis: {ai_health['technical']}")
+        logger.info(f"   Macro Analysis: {ai_health['macro']}")
+        logger.info(f"   DeepSeek Validator: {ai_health['deepseek']}")
+        logger.success("=" * 70)
 
     def load_config(self):
         """Load trading pairs configuration"""
@@ -354,70 +377,86 @@ class TradingEngine:
         if signal:
             logger.info(f"🟢 STRATEGY SIGNAL: {symbol} at ${current_price:.6f}")
 
-            # AI VALIDATION - Master Trader validates the signal
-            if self.ai_enabled:
-                try:
-                    logger.info(f"🧠 Validating {symbol} with AI Ensemble...")
+            # ============================================
+            # MANDATORY AI VALIDATION - DeepSeek AI validates ALL trades
+            # ============================================
+            logger.info(f"🧠 AI Validation Status: {'ENABLED' if self.ai_enabled else 'DISABLED'}")
 
-                    # Fetch candles for AI analysis
-                    candles_data = self.exchange.fetch_ohlcv(symbol, timeframe='1h', limit=100)
+            if not self.ai_enabled:
+                logger.critical("🚨 AI ENSEMBLE DISABLED - Trading without AI validation is extremely risky!")
+                logger.critical("🚨 Set AI_ENSEMBLE_ENABLED=true in .env to enable AI protection")
+                logger.warning("🛑 BLOCKING TRADE - AI validation is MANDATORY for safety")
+                return  # Refuse to trade without AI
 
-                    # Convert to list of dicts for AI
-                    candles = []
-                    for candle in candles_data:
-                        candles.append({
-                            'timestamp': candle[0],
-                            'open': candle[1],
-                            'high': candle[2],
-                            'low': candle[3],
-                            'close': candle[4],
-                            'volume': candle[5]
-                        })
+            try:
+                logger.info(f"🧠 Consulting DeepSeek AI Ensemble for {symbol}...")
 
-                    # Prepare technical indicators for AI
-                    closes = [c[4] for c in candles_data]
-                    technical_indicators = self._get_technical_indicators(closes, current_price)
+                # Fetch candles for AI analysis
+                candles_data = self.exchange.fetch_ohlcv(symbol, timeframe='1h', limit=100)
 
-                    # Get AI signal using asyncio
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    ai_result = loop.run_until_complete(
-                        self.ai_ensemble.generate_signal(
-                            symbol=symbol,
-                            current_price=current_price,
-                            candles=candles,
-                            technical_indicators=technical_indicators
-                        )
+                # Convert to list of dicts for AI
+                candles = []
+                for candle in candles_data:
+                    candles.append({
+                        'timestamp': candle[0],
+                        'open': candle[1],
+                        'high': candle[2],
+                        'low': candle[3],
+                        'close': candle[4],
+                        'volume': candle[5]
+                    })
+
+                # Prepare technical indicators for AI
+                closes = [c[4] for c in candles_data]
+                technical_indicators = self._get_technical_indicators(closes, current_price)
+
+                # Get AI signal using asyncio
+                logger.debug("Creating asyncio event loop for AI analysis...")
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                ai_result = loop.run_until_complete(
+                    self.ai_ensemble.generate_signal(
+                        symbol=symbol,
+                        current_price=current_price,
+                        candles=candles,
+                        technical_indicators=technical_indicators
                     )
-                    loop.close()
+                )
+                loop.close()
 
-                    ai_signal = ai_result['signal']
-                    ai_confidence = ai_result['confidence']
-                    ai_reasoning = ai_result['reasoning']
+                ai_signal = ai_result['signal']
+                ai_confidence = ai_result['confidence']
+                ai_reasoning = ai_result['reasoning']
 
-                    logger.info(f"🤖 AI Decision: {ai_signal} (confidence: {ai_confidence*100:.1f}%)")
-                    logger.info(f"💭 AI Reasoning: {ai_reasoning}")
+                logger.success(f"✅ DeepSeek AI Analysis Complete!")
+                logger.info(f"🤖 AI Decision: {ai_signal} (confidence: {ai_confidence*100:.1f}%)")
+                logger.info(f"💭 AI Reasoning: {ai_reasoning}")
 
-                    # Check if AI agrees with BUY
-                    if ai_signal != 'BUY':
-                        logger.warning(f"⚠️ AI OVERRIDE: AI recommends {ai_signal}, cancelling BUY")
-                        return
+                # Check if AI agrees with BUY
+                if ai_signal != 'BUY':
+                    logger.warning(f"⚠️ AI OVERRIDE: DeepSeek recommends {ai_signal}, CANCELLING BUY")
+                    logger.warning(f"🛡️ AI is protecting your capital - trade blocked")
+                    return
 
-                    # Check confidence threshold
-                    if ai_confidence < self.ai_min_confidence:
-                        logger.warning(f"⚠️ AI CONFIDENCE TOO LOW: {ai_confidence*100:.1f}% < {self.ai_min_confidence*100:.1f}% threshold")
-                        return
+                # Check confidence threshold
+                if ai_confidence < self.ai_min_confidence:
+                    logger.warning(f"⚠️ AI CONFIDENCE TOO LOW: {ai_confidence*100:.1f}% < {self.ai_min_confidence*100:.1f}% threshold")
+                    logger.warning(f"🛡️ Not confident enough - trade blocked for safety")
+                    return
 
-                    logger.success(f"✓ AI APPROVED: {symbol} BUY signal validated!")
+                logger.success(f"✅ AI APPROVED: {symbol} BUY signal validated by DeepSeek!")
+                logger.success(f"🎯 Proceeding with trade execution...")
 
-                except Exception as e:
-                    logger.error(f"❌ AI validation error: {e}")
-                    logger.critical("⚠️ AI VALIDATION FAILED - Cannot validate BUY signal safely")
-                    logger.warning("🛡️ SKIPPING TRADE for safety (AI ensemble required for validation)")
-                    return  # Don't trade if AI fails - safety first!
+            except Exception as e:
+                logger.error(f"❌ AI validation error: {e}")
+                logger.critical("⚠️ AI VALIDATION FAILED - Cannot validate BUY signal safely")
+                logger.warning("🛡️ BLOCKING TRADE for safety (AI ensemble is mandatory)")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                return  # Don't trade if AI fails - safety first!
 
-            # EXECUTE BUY ORDER
-            logger.info(f"🚀 EXECUTING BUY: {symbol} at ${current_price:.6f}")
+            # EXECUTE BUY ORDER (Only reached if AI approved)
+            logger.info(f"🚀 EXECUTING AI-APPROVED BUY: {symbol} at ${current_price:.6f}")
 
             # Determine which strategy triggered (for trailing stop logic)
             strategy_name = 'unknown'
@@ -473,10 +512,20 @@ class TradingEngine:
                 should_consider_selling = True
                 sell_reason = "STRATEGY"
 
-        # If any sell condition triggered, validate with AI
-        if should_consider_selling and self.ai_enabled:
+        # ============================================
+        # MANDATORY AI VALIDATION FOR SELL DECISIONS
+        # ============================================
+        if should_consider_selling:
+            logger.info(f"🧠 AI Validation Status: {'ENABLED' if self.ai_enabled else 'DISABLED'}")
+
+            if not self.ai_enabled:
+                logger.critical("🚨 AI ENSEMBLE DISABLED - Cannot validate SELL decision!")
+                logger.warning("🛑 BLOCKING SELL - AI validation required (set AI_ENSEMBLE_ENABLED=true)")
+                return  # Don't sell without AI validation
+
             try:
-                logger.info(f"🧠 Consulting AI for SELL decision on {symbol} (P&L: {pnl_percent:.2f}%, Reason: {sell_reason})...")
+                logger.info(f"🧠 Consulting DeepSeek AI for SELL decision on {symbol}...")
+                logger.info(f"   Current P&L: {pnl_percent:+.2f}% | Reason: {sell_reason}")
 
                 # Fetch candles for AI analysis
                 candles_data = self.exchange.fetch_ohlcv(symbol, timeframe='1h', limit=100)
@@ -503,6 +552,7 @@ class TradingEngine:
                 technical_indicators['hold_time'] = position.get('entry_time', 'unknown')
 
                 # Get AI signal using asyncio
+                logger.debug("Creating asyncio event loop for AI SELL analysis...")
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 ai_result = loop.run_until_complete(
@@ -519,33 +569,42 @@ class TradingEngine:
                 ai_confidence = ai_result['confidence']
                 ai_reasoning = ai_result['reasoning']
 
-                logger.info(f"🤖 AI SELL Decision: {ai_signal} (confidence: {ai_confidence*100:.1f}%)")
+                logger.success(f"✅ DeepSeek AI SELL Analysis Complete!")
+                logger.info(f"🤖 AI Decision: {ai_signal} (confidence: {ai_confidence*100:.1f}%)")
                 logger.info(f"💭 AI Reasoning: {ai_reasoning}")
 
                 # AI can recommend SELL (take profits) or HOLD (let it run)
                 if ai_signal == 'SELL' and ai_confidence >= self.ai_min_confidence:
-                    logger.success(f"✓ AI APPROVED SELL: {symbol} - Taking profits at {pnl_percent:.2f}%")
+                    logger.success(f"✅ AI APPROVED SELL: {symbol} - Taking profits at {pnl_percent:+.2f}%")
+                    logger.success(f"🎯 DeepSeek validated: Time to lock in gains")
                     self._execute_sell(symbol, current_price, sell_reason)
                     return
                 elif ai_signal == 'HOLD':
-                    logger.info(f"🤚 AI RECOMMENDS HOLD: Letting {symbol} run (current P&L: {pnl_percent:.2f}%)")
+                    logger.info(f"🤚 AI RECOMMENDS HOLD: DeepSeek says let {symbol} run longer")
+                    logger.info(f"💎 Current P&L: {pnl_percent:+.2f}% - Holding for more gains")
+                    return
+                elif ai_signal == 'BUY':
+                    logger.info(f"📈 AI RECOMMENDS HOLD: DeepSeek sees more upside potential")
+                    logger.info(f"💎 Current P&L: {pnl_percent:+.2f}% - Not selling yet")
                     return
                 else:
-                    # AI says BUY or confidence too low - default to HOLD
-                    logger.warning(f"⚠️ AI suggests {ai_signal} or confidence too low ({ai_confidence*100:.1f}%) - defaulting to HOLD")
+                    logger.warning(f"⚠️ AI confidence too low: {ai_confidence*100:.1f}% < {self.ai_min_confidence*100:.1f}%")
+                    logger.warning(f"🤚 Defaulting to HOLD for safety")
                     return
 
             except Exception as e:
-                logger.error(f"AI SELL validation error: {e}")
-                logger.warning("Proceeding with sell decision based on strategy only")
-                # Fallback: if AI fails and take-profit hit, sell anyway
-                if sell_reason == "TAKE_PROFIT":
-                    self._execute_sell(symbol, current_price, sell_reason)
+                logger.error(f"❌ AI SELL validation error: {e}")
+                logger.critical("⚠️ AI VALIDATION FAILED - Cannot validate SELL decision safely")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
 
-        elif should_consider_selling and not self.ai_enabled:
-            # AI disabled - use simple rules
-            if sell_reason == "TAKE_PROFIT":
-                self._execute_sell(symbol, current_price, sell_reason)
+                # Emergency fallback: Only execute if TAKE_PROFIT (to lock in profits)
+                if sell_reason == "TAKE_PROFIT" and pnl_percent >= self.take_profit_percent:
+                    logger.warning("⚠️ AI failed but TAKE_PROFIT hit - executing sell as fallback")
+                    self._execute_sell(symbol, current_price, sell_reason)
+                else:
+                    logger.warning("🛡️ AI failed - BLOCKING SELL for safety (defaulting to HOLD)")
+                    return
 
     def _evaluate_strategies(self, symbol, current_price, strategies, action_type):
         """
