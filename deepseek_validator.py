@@ -36,21 +36,23 @@ class DeepSeekValidator:
         current_price: float,
         technical_signals: dict,
         sentiment: dict,
-        market_data: dict
+        market_data: dict,
+        portfolio_context: dict = None,
+        volatility_metrics: dict = None
     ):
         """
-        Validate trading signal using DeepSeek AI
-        Returns: {'action': str, 'confidence': float, 'reasoning': str, 'risks': list}
+        Validate trading signal using DeepSeek AI with full market context
+        Returns: {'action': str, 'confidence': float, 'position_size': float, 'reasoning': str, 'risks': list}
         """
         try:
             if not self.api_key:
                 # Return demo response if no API key
                 return self._demo_response(symbol, technical_signals)
 
-            # Build comprehensive prompt
+            # Build comprehensive prompt with portfolio and volatility context
             prompt = self._build_prompt(
                 symbol, current_price, technical_signals,
-                sentiment, market_data
+                sentiment, market_data, portfolio_context or {}, volatility_metrics or {}
             )
 
             # Call DeepSeek API
@@ -74,9 +76,11 @@ class DeepSeekValidator:
         current_price: float,
         technical_signals: dict,
         sentiment: dict,
-        market_data: dict
+        market_data: dict,
+        portfolio_context: dict,
+        volatility_metrics: dict
     ):
-        """Build comprehensive prompt for DeepSeek"""
+        """Build comprehensive prompt for DeepSeek with full context"""
 
         # Format technical signals
         tech_summary = []
@@ -124,27 +128,93 @@ class DeepSeekValidator:
 - Confidence: {sentiment.get('confidence', 0.5):.0%}
 
 {price_action}
+"""
 
+        # Add portfolio context if available
+        if portfolio_context:
+            total_positions = portfolio_context.get('total_positions', 0)
+            max_positions = portfolio_context.get('max_positions', 10)
+            positions_list = portfolio_context.get('positions', [])
+            daily_pnl = portfolio_context.get('daily_pnl', 0)
+            total_exposure = portfolio_context.get('total_exposure_usd', 0)
+
+            strategy_breakdown = portfolio_context.get('strategy_breakdown', {})
+            strategy_text = "\n".join([f"  * {strategy}: {count} positions" for strategy, count in strategy_breakdown.items()])
+
+            prompt += f"""
+**CURRENT PORTFOLIO:**
+- Active Positions: {total_positions}/{max_positions}
+- Total Exposure: ${total_exposure:.2f}
+- Today's P&L: ${daily_pnl:.2f} ({(daily_pnl/max(total_exposure, 1))*100:+.2f}%)
+- Strategy Allocation:
+{strategy_text}
+- Pairs Held: {', '.join(positions_list[:5])}{'...' if len(positions_list) > 5 else ''}
+
+**PORTFOLIO CONSIDERATIONS:**
+- Assess if adding this position improves diversification
+- Consider if you're over-allocated to one strategy
+- Factor in total portfolio risk exposure
+"""
+
+        # Add volatility context if available
+        if volatility_metrics:
+            atr = volatility_metrics.get('atr', 0)
+            atr_percent = volatility_metrics.get('atr_percent', 0)
+            volatility_regime = volatility_metrics.get('regime', 'NORMAL')
+            avg_range = volatility_metrics.get('avg_daily_range', 0)
+
+            prompt += f"""
+**VOLATILITY ANALYSIS:**
+- ATR (14-period): ${atr:.8f} ({atr_percent:.2f}% of price)
+- Market Condition: {volatility_regime}
+- Average Daily Range: {avg_range:.2f}%
+
+**VOLATILITY GUIDANCE:**
+- High volatility (>5%): Use wider stops (3-5%), smaller position sizes
+- Medium volatility (2-5%): Standard risk parameters
+- Low volatility (<2%): Tighter stops acceptable (1-2%)
+"""
+
+        prompt += """
 **REASONING INSTRUCTIONS:**
 Think step-by-step through the following:
 
 1. **Technical Signal Strength**: Are the technical indicators showing clear consensus or conflict?
 2. **Sentiment Alignment**: Does market sentiment support or contradict the technical signals?
-3. **Risk Assessment**: What could go wrong with each potential action (BUY/SELL/HOLD)?
-4. **Historical Context**: Based on the recent price action, what's the momentum?
-5. **Probability Weighting**: What's the likelihood of success for each action?
-6. **Final Decision**: Which action offers the best risk/reward ratio?
+3. **Portfolio Impact**: How does this trade affect overall portfolio diversification and risk?
+4. **Volatility Adjustment**: Given current market volatility, what are appropriate position size and stops?
+5. **Risk Assessment**: What could go wrong with each potential action (BUY/SELL/HOLD)?
+6. **Historical Context**: Based on the recent price action, what's the momentum?
+7. **Probability Weighting**: What's the likelihood of success for each action?
+8. **Risk/Reward Calculation**: Calculate optimal position size, stop-loss, and take-profit levels
+9. **Final Decision**: Which action offers the best risk/reward ratio considering all factors?
 
 After your reasoning, provide your final recommendation in this JSON format:
 {{
     "action": "BUY" or "SELL" or "HOLD",
     "confidence": 0-100,
+    "position_size_percent": 1-20,
+    "stop_loss_percent": 0.5-5.0,
+    "take_profit_percent": 1.0-15.0,
     "reasoning": "2-3 sentences explaining your decision based on your analysis",
     "risks": ["risk1", "risk2", "risk3"]
 }}
 
+**POSITION SIZING GUIDANCE:**
+- High conviction (75%+): 12-20% position size
+- Medium conviction (65-75%): 8-12% position size
+- Low conviction (55-65%): 3-8% position size
+
+**STOP-LOSS/TAKE-PROFIT GUIDANCE:**
+- Set stop-loss based on volatility and support levels (not arbitrary %)
+- Set take-profit based on resistance and risk/reward ratio (aim for 2:1 minimum)
+- For volatile markets: Wider stops (2-5%)
+- For stable markets: Tighter stops (0.5-2%)
+
 **IMPORTANT GUIDELINES:**
-- Be conservative: Only recommend BUY/SELL if confidence is >70%
+- Only recommend BUY/SELL if your calculated confidence exceeds 55%. Otherwise, default to HOLD.
+- For high-conviction setups (70%+), consider larger position sizes
+- For moderate setups (55-70%), use smaller position sizes
 - Consider that this is REAL MONEY - prioritize capital preservation
 - If signals are mixed or unclear, default to HOLD
 - Factor in both upside potential AND downside risk
@@ -240,12 +310,25 @@ After your reasoning, provide your final recommendation in this JSON format:
             reasoning = data.get('reasoning', 'No reasoning provided')
             risks = data.get('risks', [])
 
+            # Extract new autonomous trading parameters
+            position_size = float(data.get('position_size_percent', 10))
+            stop_loss = float(data.get('stop_loss_percent', 2.0))
+            take_profit = float(data.get('take_profit_percent', 3.5))
+
             # Validate action
             if action not in ['BUY', 'SELL', 'HOLD']:
                 action = 'HOLD'
 
             # Clamp confidence to 0-100
             confidence = max(0, min(100, confidence))
+
+            # Validate and clamp autonomous trading parameters
+            position_size = max(1, min(20, position_size))  # 1-20%
+            stop_loss = max(0.5, min(5.0, stop_loss))  # 0.5-5%
+            take_profit = max(1.0, min(15.0, take_profit))  # 1-15%
+
+            # Calculate risk/reward ratio
+            risk_reward_ratio = take_profit / stop_loss if stop_loss > 0 else 0
 
             # Combine Chain-of-Thought reasoning with final reasoning
             full_reasoning = reasoning
@@ -257,6 +340,10 @@ After your reasoning, provide your final recommendation in this JSON format:
             return {
                 'action': action,
                 'confidence': confidence,
+                'position_size_percent': position_size,
+                'stop_loss_percent': stop_loss,
+                'take_profit_percent': take_profit,
+                'risk_reward_ratio': risk_reward_ratio,
                 'reasoning': full_reasoning,
                 'risks': risks,
                 'source': 'deepseek-r1',
@@ -279,6 +366,10 @@ After your reasoning, provide your final recommendation in this JSON format:
             return {
                 'action': action,
                 'confidence': 50,
+                'position_size_percent': 10,
+                'stop_loss_percent': 2.0,
+                'take_profit_percent': 3.5,
+                'risk_reward_ratio': 1.75,
                 'reasoning': response_text[:200] if isinstance(response_text, str) else 'Parse error',
                 'risks': [],
                 'source': 'deepseek-r1-fallback'
@@ -323,9 +414,18 @@ After your reasoning, provide your final recommendation in this JSON format:
 
         reasoning = ". ".join(reasoning_parts) if reasoning_parts else "Signals are mixed or neutral"
 
+        # Determine position sizing based on signal strength
+        position_size = 5 + (abs(signal_strength) * 2)  # 5-15%
+        stop_loss = 2.0
+        take_profit = 3.5
+
         return {
             'action': action,
             'confidence': confidence,
+            'position_size_percent': position_size,
+            'stop_loss_percent': stop_loss,
+            'take_profit_percent': take_profit,
+            'risk_reward_ratio': take_profit / stop_loss,
             'reasoning': f"{reasoning}. Demo mode - get DeepSeek API key for full AI analysis.",
             'risks': ["Demo mode active", "Set DEEPSEEK_API_KEY for real AI"],
             'source': 'demo'
@@ -336,6 +436,10 @@ After your reasoning, provide your final recommendation in this JSON format:
         return {
             'action': 'HOLD',
             'confidence': 50,
+            'position_size_percent': 10,
+            'stop_loss_percent': 2.0,
+            'take_profit_percent': 3.5,
+            'risk_reward_ratio': 1.75,
             'reasoning': 'AI validation unavailable, defaulting to HOLD for safety',
             'risks': ['AI service temporarily unavailable'],
             'source': 'fallback'
