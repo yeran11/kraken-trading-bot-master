@@ -51,11 +51,13 @@ class AIEnsemble:
         symbol: str,
         current_price: float,
         candles: list,
-        technical_indicators: dict
+        technical_indicators: dict,
+        portfolio_context: dict = None,
+        volatility_metrics: dict = None
     ):
         """
-        Generate trading signal by combining all 4 AI models
-        Returns: {'signal': str, 'confidence': float, 'reasoning': str, 'breakdown': dict}
+        Generate trading signal by combining all 4 AI models with full context
+        Returns: {'signal': str, 'confidence': float, 'reasoning': str, 'breakdown': dict, 'parameters': dict}
         """
         try:
             logger.info(f"🤖 AI Ensemble analyzing {symbol}...")
@@ -65,7 +67,7 @@ class AIEnsemble:
                 self._get_sentiment_signal(symbol),
                 self._get_technical_signal(technical_indicators),
                 self._get_macro_signal(),
-                self._get_deepseek_signal(symbol, current_price, technical_indicators, candles),
+                self._get_deepseek_signal(symbol, current_price, technical_indicators, candles, portfolio_context, volatility_metrics),
                 return_exceptions=True
             )
 
@@ -220,8 +222,8 @@ class AIEnsemble:
             logger.error(f"Macro signal error: {e}")
             return self._neutral_signal()
 
-    async def _get_deepseek_signal(self, symbol, current_price, indicators, candles):
-        """Get DeepSeek AI validation"""
+    async def _get_deepseek_signal(self, symbol, current_price, indicators, candles, portfolio_context=None, volatility_metrics=None):
+        """Get DeepSeek AI validation with full context"""
         try:
             # Prepare market data
             market_data = {
@@ -231,13 +233,15 @@ class AIEnsemble:
             # Get sentiment for context
             sentiment = await self.ai_service.analyze_sentiment(symbol)
 
-            # Validate with DeepSeek
+            # Validate with DeepSeek (now includes portfolio and volatility context!)
             validation = await self.deepseek.validate_signal(
                 symbol=symbol,
                 current_price=current_price,
                 technical_signals=indicators,
                 sentiment=sentiment,
-                market_data=market_data
+                market_data=market_data,
+                portfolio_context=portfolio_context,
+                volatility_metrics=volatility_metrics
             )
 
             signal = validation['action']  # BUY, SELL, or HOLD
@@ -246,7 +250,7 @@ class AIEnsemble:
             return {
                 'signal': signal,
                 'confidence': confidence,
-                'details': validation,
+                'details': validation,  # Now includes position_size, stop_loss, take_profit!
                 'source': 'deepseek'
             }
 
@@ -299,11 +303,25 @@ class AIEnsemble:
         # Generate reasoning
         reasoning = self._generate_reasoning(sentiment, technical, macro, deepseek, final_signal)
 
-        # Return comprehensive result
+        # Extract dynamic trading parameters from DeepSeek
+        deepseek_details = deepseek.get('details', {})
+        position_size = deepseek_details.get('position_size_percent', 10)
+        stop_loss = deepseek_details.get('stop_loss_percent', 2.0)
+        take_profit = deepseek_details.get('take_profit_percent', 3.5)
+        risk_reward = deepseek_details.get('risk_reward_ratio', 1.75)
+
+        # Return comprehensive result with autonomous trading parameters
         return {
             'signal': final_signal,
             'confidence': float(final_confidence),
             'reasoning': reasoning,
+            # NEW: Dynamic trading parameters from DeepSeek
+            'parameters': {
+                'position_size_percent': position_size,
+                'stop_loss_percent': stop_loss,
+                'take_profit_percent': take_profit,
+                'risk_reward_ratio': risk_reward
+            },
             'breakdown': {
                 'sentiment': {
                     'signal': sentiment['signal'],
@@ -324,7 +342,11 @@ class AIEnsemble:
                     'signal': deepseek['signal'],
                     'confidence': deepseek['confidence'],
                     'weight': self.weights['deepseek'],
-                    'reasoning': deepseek['details'].get('reasoning', '')
+                    'reasoning': deepseek['details'].get('reasoning', ''),
+                    # Include autonomous parameters in breakdown
+                    'position_size': position_size,
+                    'stop_loss': stop_loss,
+                    'take_profit': take_profit
                 }
             },
             'scores': {
@@ -377,6 +399,12 @@ class AIEnsemble:
             'signal': 'HOLD',
             'confidence': 0.3,
             'reasoning': 'AI ensemble unavailable, defaulting to HOLD for safety',
+            'parameters': {
+                'position_size_percent': 10,
+                'stop_loss_percent': 2.0,
+                'take_profit_percent': 3.5,
+                'risk_reward_ratio': 1.75
+            },
             'breakdown': {},
             'scores': {'buy': 0, 'sell': 0, 'hold': 1}
         }
