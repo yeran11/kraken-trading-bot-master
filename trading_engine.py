@@ -477,6 +477,8 @@ class TradingEngine:
 
                 # Prepare technical indicators for AI
                 closes = [c[4] for c in candles_data]
+                highs = [c[2] for c in candles_data]
+                lows = [c[3] for c in candles_data]
                 technical_indicators = self._get_technical_indicators(closes, current_price)
 
                 # PHASE 3: Calculate portfolio and volatility context for AI
@@ -484,7 +486,7 @@ class TradingEngine:
                 portfolio_context = self._calculate_portfolio_context()
 
                 logger.debug("📈 Calculating volatility metrics for AI...")
-                volatility_metrics = self._calculate_volatility_metrics(symbol, closes)
+                volatility_metrics = self._calculate_volatility_metrics(symbol, highs, lows, closes)
 
                 # Get AI signal using asyncio WITH FULL CONTEXT
                 logger.debug("Creating asyncio event loop for AI analysis...")
@@ -1648,7 +1650,7 @@ class TradingEngine:
                 'strategy_breakdown': {}
             }
 
-    def _calculate_volatility_metrics(self, symbol, closes):
+    def _calculate_volatility_metrics(self, symbol, highs, lows, closes):
         """
         Calculate volatility metrics for risk adjustment
         Helps DeepSeek adapt position sizing and stops to market conditions
@@ -1662,10 +1664,12 @@ class TradingEngine:
                     'avg_daily_range': 0
                 }
 
-            # Calculate ATR (14-period)
-            atr = self._calculate_atr(closes, period=14)
+            # Calculate ATR (14-period) using proper True Range calculation
+            atr = self._calculate_atr(highs, lows, closes, period=14)
+            if atr is None:
+                atr = 0
             current_price = closes[-1]
-            atr_percent = (atr / current_price) * 100 if current_price > 0 else 0
+            atr_percent = (atr / current_price) * 100 if current_price > 0 and atr > 0 else 0
 
             # Determine volatility regime
             if atr_percent > 5.0:
@@ -1702,28 +1706,6 @@ class TradingEngine:
                 'regime': 'UNKNOWN',
                 'avg_daily_range': 0
             }
-
-    def _calculate_atr(self, closes, period=14):
-        """
-        Calculate Average True Range for volatility measurement
-        """
-        if len(closes) < period + 1:
-            return 0
-
-        try:
-            true_ranges = []
-            for i in range(1, min(period + 1, len(closes))):
-                high = max(closes[-i], closes[-i-1])
-                low = min(closes[-i], closes[-i-1])
-                true_range = high - low
-                true_ranges.append(true_range)
-
-            atr = sum(true_ranges) / len(true_ranges) if true_ranges else 0
-            return atr
-
-        except Exception as e:
-            logger.error(f"Error calculating ATR: {e}")
-            return 0
 
     def test_risk_management(self):
         """
