@@ -212,12 +212,16 @@ After your reasoning, provide your final recommendation in this JSON format:
 - For stable markets: Tighter stops (0.5-2%)
 
 **IMPORTANT GUIDELINES:**
-- Only recommend BUY/SELL if your calculated confidence exceeds 55%. Otherwise, default to HOLD.
-- For high-conviction setups (70%+), consider larger position sizes
-- For moderate setups (55-70%), use smaller position sizes
-- Consider that this is REAL MONEY - prioritize capital preservation
-- If signals are mixed or unclear, default to HOLD
-- Factor in both upside potential AND downside risk
+- ULTRA-AGGRESSIVE MODE: Look for ANY profitable opportunity above 50% confidence
+- Recommend BUY if confidence exceeds 50% (lowered from 55% for more opportunities)
+- For high-conviction setups (70%+), consider larger position sizes (15-20%)
+- For moderate setups (55-70%), use medium position sizes (8-12%)
+- For acceptable setups (50-55%), use smaller position sizes (3-8%)
+- This is REAL MONEY but we want to MAXIMIZE profitable trades
+- Small consistent profits compound into large gains
+- Even moderate signals (50-60% confidence) can be profitable with proper risk management
+- Factor in upside potential FIRST, then manage downside risk with stops
+- BE AGGRESSIVE: Find opportunities, don't be overly cautious
 """
 
         return prompt

@@ -16,6 +16,12 @@ import pandas as pd
 # AI Ensemble - Master Trader Intelligence
 from ai_ensemble import AIEnsemble
 
+# TIER 3 & 4: Master Trader Advanced Modules
+from trade_history import TradeHistory
+from alerter import alerter
+from deepseek_chain import DeepSeekChain
+from deepseek_debate import DeepSeekDebate
+
 # Multi-Timeframe Trading Components
 from multi_timeframe_analyzer import MultiTimeframeAnalyzer
 from signal_aggregator import SignalAggregator
@@ -98,6 +104,28 @@ class TradingEngine:
         self.signal_aggregator = SignalAggregator(self.exchange)
         logger.info("✓ Multi-Timeframe Analyzer initialized")
         logger.info("✓ Signal Aggregator initialized")
+
+        # ============================================
+        # TIER 3 & 4: MASTER TRADER MODULES
+        # ============================================
+        # Performance tracking database
+        self.trade_history = TradeHistory()
+        logger.info("✓ Trade History Database initialized")
+
+        # Advanced AI reasoning modules
+        self.deepseek_chain = DeepSeekChain(api_key=deepseek_key)
+        self.deepseek_debate = DeepSeekDebate(api_key=deepseek_key)
+        logger.info("✓ Advanced AI Reasoning (Chain + Debate) initialized")
+
+        # Telegram alerts
+        logger.info("✓ Alerter system initialized")
+
+        # AI reasoning mode selection
+        # 'standard' = Fast ensemble (default)
+        # 'chain' = 3-call chained reasoning (thorough)
+        # 'debate' = Multi-agent debate (comprehensive)
+        self.ai_reasoning_mode = os.getenv('AI_REASONING_MODE', 'standard').lower()
+        logger.info(f"✓ AI Reasoning Mode: {self.ai_reasoning_mode.upper()}")
 
         # AI configuration
         self.ai_enabled = os.getenv('AI_ENSEMBLE_ENABLED', 'true').lower() == 'true'
@@ -309,6 +337,10 @@ class TradingEngine:
         self.trading_thread.start()
 
         logger.info("🚀 Trading engine STARTED - Real trades will be executed")
+
+        # Send Telegram alert
+        alerter.bot_started()
+
         return True
 
     def stop(self):
@@ -426,8 +458,10 @@ class TradingEngine:
         balance = self.exchange.fetch_balance()
         usd_available = balance.get('USD', {}).get('free', 0)
 
+        logger.debug(f"💰 {symbol} - Checking BUY signal | Balance: ${usd_available:.2f} | Price: {format_price(current_price)}")
+
         if usd_available < 1:
-            logger.debug(f"Insufficient USD balance: ${usd_available:.2f}")
+            logger.warning(f"❌ {symbol}: Insufficient USD balance: ${usd_available:.2f}")
             return
 
         # Calculate how much to invest based on allocation
@@ -436,14 +470,18 @@ class TradingEngine:
         # Don't exceed max order size
         investment = min(max_investment, self.max_order_size)
 
+        logger.debug(f"💵 {symbol} - Max investment: ${max_investment:.2f} | Capped at: ${investment:.2f} (max order: ${self.max_order_size})")
+
         if investment < 1:
-            logger.debug(f"{symbol}: Investment too small: ${investment:.2f}")
+            logger.warning(f"❌ {symbol}: Investment too small: ${investment:.2f}")
             return
 
         # Check strategy signals
+        logger.debug(f"📊 {symbol} - Evaluating strategies: {strategies}")
         signal = self._evaluate_strategies(symbol, current_price, strategies, 'BUY')
 
         if signal:
+            logger.info(f"✅ {symbol} - STRATEGY SIGNAL DETECTED!")
             logger.info(f"🟢 STRATEGY SIGNAL: {symbol} at {format_price(current_price)}")
 
             # ============================================
@@ -732,14 +770,15 @@ class TradingEngine:
             if 'momentum' in strategies:
                 if action_type == 'BUY':
                     # Buy if short MA is above long MA (uptrend)
-                    # LOWERED from 0.5% to 0.3% to catch more opportunities
+                    # ULTRA-AGGRESSIVE: LOWERED from 0.3% to 0.15% to catch MORE opportunities
+                    # This allows catching earlier uptrends for better entry prices
                     sma_diff_percent = ((sma_5 - sma_20) / sma_20) * 100
 
-                    if sma_5 > sma_20 and current_price > sma_5 and sma_diff_percent >= 0.3:
-                        logger.info(f"{symbol} Momentum BUY signal: Price {format_price(current_price)} > SMA5 {format_price(sma_5)} > SMA20 {format_price(sma_20)} (Gap: {sma_diff_percent:.2f}%)")
+                    if sma_5 > sma_20 and current_price > sma_5 and sma_diff_percent >= 0.15:
+                        logger.info(f"{symbol} 🎯 MOMENTUM BUY SIGNAL: Price {format_price(current_price)} > SMA5 {format_price(sma_5)} > SMA20 {format_price(sma_20)} (Gap: {sma_diff_percent:.2f}%)")
                         return True
                     else:
-                        logger.debug(f"{symbol} Momentum BUY: Not strong enough. SMA5/SMA20 gap: {sma_diff_percent:.2f}% (need 0.3%+)")
+                        logger.debug(f"{symbol} Momentum BUY: SMA5/SMA20 gap: {sma_diff_percent:.2f}% (need 0.15%+)")
 
                 elif action_type == 'SELL':
                     # CRITICAL FIX: Only sell if momentum has CLEARLY reversed
@@ -778,12 +817,13 @@ class TradingEngine:
                 rsi = self._calculate_rsi(closes)
 
                 if action_type == 'BUY':
-                    # IMPROVED: Buy on EITHER condition (more opportunities):
-                    # 1. Price below lower Bollinger Band (extreme oversold), OR
-                    # 2. RSI < 35 AND price within 0.5% of lower band (approaching oversold)
-                    near_lower_band = current_price < lower_band * 1.005  # Within 0.5% of lower band
+                    # ULTRA-AGGRESSIVE MEAN REVERSION: Buy on MULTIPLE conditions:
+                    # 1. Price below lower Bollinger Band (oversold), OR
+                    # 2. RSI < 40 AND price within 1.5% of lower band (approaching oversold), OR
+                    # 3. RSI < 30 (extreme oversold regardless of band position)
+                    near_lower_band = current_price < lower_band * 1.015  # Within 1.5% of lower band (more lenient)
 
-                    if current_price < lower_band:
+                    if current_price < lower_band or (rsi < 30):
                         deviation = ((current_price - lower_band) / lower_band) * 100
                         logger.info(f"{symbol} Mean Reversion BUY: Price {format_price(current_price)} < Lower Band {format_price(lower_band)} (Deviation: {deviation:.2f}%, RSI: {rsi:.1f})")
                         return True
@@ -1202,6 +1242,26 @@ class TradingEngine:
                 'ai_risk_reward_ratio': ai_risk_reward_ratio
             }
 
+            # TIER 4: Record trade entry in performance database
+            ai_result = {
+                'confidence': ai_position_size_percent or 60,  # Default if not provided
+                'reasoning': strategy,
+                'parameters': {
+                    'position_size_percent': ai_position_size_percent or 10,
+                    'stop_loss_percent': ai_stop_loss_percent or 2.0,
+                    'take_profit_percent': ai_take_profit_percent or 3.5
+                }
+            }
+            trade_id = self.trade_history.record_entry(
+                symbol=symbol,
+                strategy=strategy,
+                entry_price=price,
+                quantity=quantity,
+                ai_result=ai_result
+            )
+            # Store trade_id for later exit recording
+            self.positions[symbol]['trade_id'] = trade_id
+
             # Log trade
             self.trades_history.append({
                 'symbol': symbol,
@@ -1217,6 +1277,16 @@ class TradingEngine:
             self.save_trades()
 
             logger.success(f"✅ BUY order executed: {symbol} at ${price:.2f}")
+
+            # TIER 4: Send Telegram alert
+            alerter.buy_executed(
+                symbol=symbol,
+                price=price,
+                quantity=quantity,
+                usd_amount=usd_amount,
+                ai_confidence=ai_position_size_percent or 60,
+                strategy=strategy
+            )
 
         except Exception as e:
             logger.error(f"❌ Failed to execute BUY order for {symbol}: {e}")
@@ -1302,6 +1372,18 @@ class TradingEngine:
 
                 logger.success(f"✅ Order #{order.get('id')} created successfully")
 
+                # TIER 4: Record trade exit in performance database
+                trade_id = position.get('trade_id')
+                if trade_id:
+                    outcome = 'WIN' if pnl > 0 else 'LOSS'
+                    self.trade_history.record_exit(
+                        trade_id=trade_id,
+                        exit_price=price,
+                        exit_reason=reason
+                    )
+                    # Record outcome for ensemble weight optimization
+                    self.ai_ensemble.record_trade_outcome(outcome)
+
                 # Remove position from tracking
                 del self.positions[symbol]
 
@@ -1322,6 +1404,16 @@ class TradingEngine:
                 # CRITICAL: Save immediately to disk
                 self.save_positions()
                 self.save_trades()
+
+                # TIER 4: Send Telegram alert
+                alerter.sell_executed(
+                    symbol=symbol,
+                    price=price,
+                    quantity=quantity,
+                    pnl_usd=pnl,
+                    pnl_percent=pnl_percent,
+                    reason=reason
+                )
 
                 # Success logging
                 profit_loss = "PROFIT" if pnl >= 0 else "LOSS"
