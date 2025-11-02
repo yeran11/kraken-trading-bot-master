@@ -321,6 +321,38 @@ class TradingEngine:
             logger.warning("Trading engine already running")
             return False
 
+        # CRITICAL: Test API connection before starting
+        logger.info("🔑 Testing Kraken API connection...")
+        try:
+            test_balance = self.exchange.fetch_balance()
+            usd_balance = test_balance.get('USD', {}).get('free', 0)
+            logger.success(f"✅ API Connection successful! USD Balance: ${usd_balance:.2f}")
+        except Exception as e:
+            error_msg = str(e)
+            logger.critical("=" * 70)
+            logger.critical("🚨 CRITICAL ERROR: Cannot connect to Kraken API!")
+            logger.critical("=" * 70)
+            logger.critical(f"Error: {error_msg}")
+            logger.critical("")
+            logger.critical("POSSIBLE CAUSES:")
+            logger.critical("1. API key expired or revoked")
+            logger.critical("2. API key missing required permissions")
+            logger.critical("3. Invalid API credentials")
+            logger.critical("4. IP not whitelisted (if enabled)")
+            logger.critical("")
+            logger.critical("HOW TO FIX:")
+            logger.critical("1. Go to: https://www.kraken.com/u/security/api")
+            logger.critical("2. Generate NEW API key with these permissions:")
+            logger.critical("   ✅ Query Funds")
+            logger.critical("   ✅ Query Open Orders & Trades")
+            logger.critical("   ✅ Query Closed Orders & Trades")
+            logger.critical("   ✅ Create & Modify Orders")
+            logger.critical("   ✅ Cancel/Close Orders")
+            logger.critical("3. Update KRAKEN_API_KEY and KRAKEN_API_SECRET in .env")
+            logger.critical("4. Restart the bot")
+            logger.critical("=" * 70)
+            return False
+
         self.load_config()
         self.load_positions()  # Load saved positions from file
         self.load_trades()     # Load trade history from file
@@ -439,17 +471,28 @@ class TradingEngine:
         if not strategies:
             return
 
-        # Fetch current market data
-        ticker = self.exchange.fetch_ticker(symbol)
-        current_price = ticker['last']
+        try:
+            # Fetch current market data
+            ticker = self.exchange.fetch_ticker(symbol)
+            current_price = ticker['last']
 
-        # Check if we already have a position
-        if symbol in self.positions:
-            # Have position - check if we should sell
-            self._check_sell_signal(symbol, current_price, strategies)
-        else:
-            # No position - check if we should buy
-            self._check_buy_signal(symbol, current_price, allocation, strategies)
+            # Check if we already have a position
+            if symbol in self.positions:
+                # Have position - check if we should sell
+                self._check_sell_signal(symbol, current_price, strategies)
+            else:
+                # No position - check if we should buy
+                self._check_buy_signal(symbol, current_price, allocation, strategies)
+
+        except Exception as e:
+            error_str = str(e)
+            if "Invalid key" in error_str or "EAPI" in error_str:
+                logger.critical(f"🚨 API AUTHENTICATION ERROR for {symbol}: {error_str}")
+                logger.critical("Your Kraken API keys are invalid! Bot cannot trade.")
+                logger.critical("Please generate new API keys and update .env file")
+                # Don't crash, just skip this iteration
+            else:
+                logger.error(f"Error processing {symbol}: {e}")
 
     def _check_buy_signal(self, symbol, current_price, allocation, strategies):
         """Check if we should buy this pair"""
