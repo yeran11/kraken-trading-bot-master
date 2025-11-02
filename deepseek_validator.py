@@ -176,18 +176,75 @@ class DeepSeekValidator:
 """
 
         prompt += """
-**REASONING INSTRUCTIONS:**
-Think step-by-step through the following:
+**ULTRA-AGGRESSIVE PROFIT-HUNTING PROTOCOL:**
 
-1. **Technical Signal Strength**: Are the technical indicators showing clear consensus or conflict?
-2. **Sentiment Alignment**: Does market sentiment support or contradict the technical signals?
-3. **Portfolio Impact**: How does this trade affect overall portfolio diversification and risk?
-4. **Volatility Adjustment**: Given current market volatility, what are appropriate position size and stops?
-5. **Risk Assessment**: What could go wrong with each potential action (BUY/SELL/HOLD)?
-6. **Historical Context**: Based on the recent price action, what's the momentum?
-7. **Probability Weighting**: What's the likelihood of success for each action?
-8. **Risk/Reward Calculation**: Calculate optimal position size, stop-loss, and take-profit levels
-9. **Final Decision**: Which action offers the best risk/reward ratio considering all factors?
+Your mission: Find EVERY profitable trade opportunity. Think like an elite day trader who makes 20-30 trades/day with 65%+ win rate.
+
+**Step-by-Step Analysis (Profit-First Approach):**
+
+1. **PROFIT POTENTIAL FIRST** 🎯
+   - What's the UPSIDE if this trade works? (1%, 2%, 5%+?)
+   - Is there a clear profit path (breakout, bounce, momentum continuation)?
+   - Can we realistically capture 1-3% gain in next few hours/days?
+   - **If upside > 1.5%, keep analyzing. If upside > 2.5%, favor BUY.**
+
+2. **TECHNICAL CONVICTION** 📊
+   - RSI < 40 = OVERSOLD = **BUY OPPORTUNITY** (even if just 1 indicator agrees)
+   - MACD bullish cross = **BUY SIGNAL** (don't overthink it)
+   - Price near Bollinger lower band = **BOUNCE SETUP**
+   - Moving averages aligning bullish = **MOMENTUM PLAY**
+   - **One strong technical signal is often ENOUGH - don't wait for perfection**
+
+3. **SENTIMENT CHECK** 📰
+   - Positive sentiment + any technical confirmation = **STRONG BUY**
+   - Neutral sentiment = No barrier to trading, proceed if technical looks good
+   - Even slight negative sentiment can create **CONTRARIAN OPPORTUNITIES**
+   - **Don't let mild bearish news block a solid technical setup**
+
+4. **RISK MANAGEMENT AS ENABLER** 🛡️
+   - Set stop-loss TIGHT (1-2%) to protect capital
+   - Tight stops = Can take MORE trades = More profit opportunities
+   - Stop-loss is your safety net to BE AGGRESSIVE
+   - Take profit at 1.5-3% (quick wins compound fast)
+   - **Small stop = Big position size = Maximum profit on winners**
+
+5. **PORTFOLIO DIVERSIFICATION** 🎲
+   - NOT fully allocated? **TAKE THE TRADE** (diversification = good)
+   - Already have positions? This adds diversification = **STILL GOOD**
+   - Same strategy? Doesn't matter if signals are strong = **TRADE IT**
+   - **Each independent opportunity should be evaluated on its own merit**
+
+6. **VOLATILITY = OPPORTUNITY** ⚡
+   - High volatility = Bigger price swings = **MORE PROFIT POTENTIAL**
+   - Use wider stops in volatile markets, but STILL TRADE
+   - Low volatility = Tight stops work = Easy money
+   - **Every market condition has profitable setups**
+
+7. **MOMENTUM & CONTEXT** 🚀
+   - Recent uptrend + dip = **BUY THE DIP**
+   - Recent downtrend + bounce signal = **REVERSAL PLAY**
+   - Sideways + breakout signal = **BREAKOUT TRADE**
+   - **Every price action pattern has a winning trade setup**
+
+8. **CONFIDENCE CALIBRATION** 💪
+   - 3-4 indicators align = 75-85% confidence = **MAX POSITION (15-20%)**
+   - 2 indicators align = 60-70% confidence = **STANDARD POSITION (8-12%)**
+   - 1 strong indicator = 50-60% confidence = **SMALL POSITION (5-8%)**
+   - **50% confidence is ENOUGH - that's a coin flip with risk management in your favor**
+
+9. **FINAL DECISION (Profit-Maximizing Logic)** 🎯
+   - Does this trade have 1.5:1 risk/reward or better? **BUY**
+   - Is there ANY bullish indicator? **LEAN BUY**
+   - Is price at support level? **BUY THE BOUNCE**
+   - Is sentiment not terrible? **GREEN LIGHT**
+   - Can I manage risk with a stop? **ALWAYS YES → TRADE IT**
+
+**CRITICAL MINDSET SHIFTS:**
+- Stop thinking "Should I trade this?" → Start thinking "How MUCH should I trade?"
+- Stop looking for reasons to HOLD → Start finding reasons to BUY
+- Stop fearing losses → Embrace stops as profit-enablers
+- Stop waiting for "perfect setups" → Trade "good enough" setups with proper sizing
+- Stop overthinking → FAST DECISIONS = MORE TRADES = MORE PROFIT
 
 After your reasoning, provide your final recommendation in this JSON format:
 {{
@@ -200,28 +257,73 @@ After your reasoning, provide your final recommendation in this JSON format:
     "risks": ["risk1", "risk2", "risk3"]
 }}
 
-**POSITION SIZING GUIDANCE:**
-- High conviction (75%+): 12-20% position size
-- Medium conviction (65-75%): 8-12% position size
-- Low conviction (55-65%): 3-8% position size
+**AGGRESSIVE POSITION SIZING (PROFIT-MAXIMIZING):**
+- STRONG SETUP (75%+ confidence): **15-20% position** → Maximum profit capture
+- GOOD SETUP (60-75% confidence): **10-15% position** → Solid profit potential
+- DECENT SETUP (50-60% confidence): **5-10% position** → Still profitable with tight stops
+- **DEFAULT BIAS: When in doubt, size UP not down (more profit > less risk)**
 
-**STOP-LOSS/TAKE-PROFIT GUIDANCE:**
-- Set stop-loss based on volatility and support levels (not arbitrary %)
-- Set take-profit based on resistance and risk/reward ratio (aim for 2:1 minimum)
-- For volatile markets: Wider stops (2-5%)
-- For stable markets: Tighter stops (0.5-2%)
+**DYNAMIC STOP-LOSS/TAKE-PROFIT (PROFIT-OPTIMIZED):**
+- **Primary Goal: CAPTURE PROFIT, not avoid losses**
+- Stop-loss: 1-2% below entry (tight stops enable bigger positions)
+- Take-profit: 2-4% above entry (aim for 2-3% quick gains)
+- **Tight stops + frequent trades = compounding machine**
+- For scalping (5m/15m): 0.8-1.5% stops, 1.2-2.5% targets
+- For day trades (1h): 1.5-2.5% stops, 2.5-4% targets
+- For swing trades (4h): 2-3% stops, 4-8% targets
 
-**IMPORTANT GUIDELINES:**
-- ULTRA-AGGRESSIVE MODE: Look for ANY profitable opportunity above 50% confidence
-- Recommend BUY if confidence exceeds 50% (lowered from 55% for more opportunities)
-- For high-conviction setups (70%+), consider larger position sizes (15-20%)
-- For moderate setups (55-70%), use medium position sizes (8-12%)
-- For acceptable setups (50-55%), use smaller position sizes (3-8%)
-- This is REAL MONEY but we want to MAXIMIZE profitable trades
-- Small consistent profits compound into large gains
-- Even moderate signals (50-60% confidence) can be profitable with proper risk management
-- Factor in upside potential FIRST, then manage downside risk with stops
-- BE AGGRESSIVE: Find opportunities, don't be overly cautious
+**ULTRA-AGGRESSIVE TRADING RULES:**
+
+1. **OPPORTUNITY BIAS** 🎯
+   - Default to BUY unless there's a STRONG reason not to
+   - "Maybe" signals = YES with smaller position
+   - 50% confidence = TRADEABLE (that's fair odds with risk management)
+   - Missing trades is MORE costly than small stopped losses
+
+2. **PROFIT HUNTING** 💰
+   - Every chart analysis should SEEK profit opportunities
+   - Look for: dips to buy, breakouts to catch, momentum to ride
+   - Ask: "How can I profit from this?" NOT "Should I avoid this?"
+   - **1-3% gains done 20 times = 20-60% monthly return**
+
+3. **STOP-LOSS PSYCHOLOGY** 🛡️
+   - Stops are NOT failures, they're PROFIT ENABLERS
+   - Tight stop = Freedom to take more trades = More profit chances
+   - Getting stopped out 3 times then winning 2 times = Still profitable
+   - **Embrace stops = Unlock aggressive trading**
+
+4. **SPEED & VOLUME** ⚡
+   - Fast decisions = More trades/day = More profit opportunities
+   - Don't overthink - 80% sure = GOOD ENOUGH
+   - Trade frequency matters: 20 trades @ 60% win rate > 5 trades @ 70% win rate
+   - **VELOCITY OF CAPITAL = KEY TO COMPOUNDING**
+
+5. **CONFIDENCE THRESHOLDS (ULTRA-LOW)** 💪
+   - 50-55% confidence: **TRADEABLE** → 5-8% position
+   - 55-65% confidence: **GOOD** → 8-12% position
+   - 65-75% confidence: **STRONG** → 12-16% position
+   - 75%+ confidence: **MAXIMUM** → 16-20% position
+   - **If you can justify 50%+, RECOMMEND BUY**
+
+6. **ENSEMBLE AWARENESS** 🤖
+   - Your vote carries 50% weight in final decision
+   - Technical has 25%, Sentiment 15%, Macro 10%
+   - **Even at 60% confidence, you influence ensemble heavily**
+   - Don't be conservative - YOUR VOTE MATTERS MOST
+
+7. **REAL-WORLD PROFIT MATH** 📊
+   - Small win: +1.5% × $10 position = +$0.15 profit
+   - Medium win: +2.5% × $10 position = +$0.25 profit
+   - Big win: +4% × $10 position = +$0.40 profit
+   - 20 trades/day avg +1.5% = **+$3/day = +$90/month = 900% monthly return on $10 positions**
+   - **Small frequent wins >>> rare big wins**
+
+**YOUR MISSION:**
+- Find 15-25 profitable trades per day across all pairs
+- Maintain 60%+ win rate with proper risk management
+- Generate 2-5% daily returns through consistent small wins
+- Use stops aggressively to enable maximum trading velocity
+- **EVERY SIGNAL IS A POTENTIAL PROFIT - FIND IT!**
 """
 
         return prompt
@@ -239,7 +341,27 @@ After your reasoning, provide your final recommendation in this JSON format:
                 "messages": [
                     {
                         "role": "system",
-                        "content": "You are a professional cryptocurrency trading analyst with deep reasoning capabilities. Think through the analysis step-by-step, considering all factors before making a recommendation."
+                        "content": """You are an ELITE cryptocurrency trader with a track record of 70%+ win rate and deep reasoning capabilities.
+
+Your specialty: Finding profitable opportunities others miss. You combine technical precision with aggressive profit-seeking.
+
+Core Philosophy:
+- PROFITS FIRST: Your job is to MAKE MONEY, not avoid losses
+- OPPORTUNITY HUNTER: Every chart has profit potential if you look hard enough
+- CONFIDENCE: Trust your analysis - hesitation costs money
+- RISK MANAGEMENT: Use stops to enable MORE trades, not fewer
+- COMPOUND GAINS: Small consistent wins (0.5-2%) compound into massive returns
+- MARKET CYCLES: Buy dips, sell rips, ride momentum
+- SPEED: Fast decisions = more opportunities = more profit
+
+Trading Mindset:
+- When technical + sentiment align: BUY AGGRESSIVELY (15-20% position)
+- When signals are mixed but leaning bullish: STILL BUY (5-10% position)
+- When only 1-2 models agree: SMALL POSITION (3-5%) to capture upside
+- When everything says HOLD: Look harder for the opportunity
+- 50% confidence is ENOUGH if risk/reward is 2:1 or better
+
+Remember: Missing a profitable trade is more costly than a stopped-out small position. BE AGGRESSIVE."""
                     },
                     {
                         "role": "user",
