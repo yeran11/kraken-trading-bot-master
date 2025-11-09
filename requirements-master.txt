@@ -1,0 +1,56 @@
+# Kraken Trading Bot - Master Trader Edition
+# Optimized dependencies (reduced from ~5GB to ~500MB)
+
+# Core Trading
+ccxt==4.2.25                    # Exchange integration
+pandas==2.1.4                   # Data manipulation
+numpy==1.26.3                   # Numerical computing
+
+# Technical Analysis
+ta==0.11.0                      # Technical indicators library
+
+# Web Dashboard
+flask==3.0.0                    # Web framework
+flask-socketio==5.3.5           # Real-time updates
+python-socketio==5.10.0         # WebSocket support
+flask-cors==4.0.0               # CORS support
+
+# Database
+sqlalchemy==2.0.25              # ORM
+alembic==1.13.1                 # Database migrations
+
+# Logging & Monitoring
+loguru==0.7.2                   # Beautiful logging
+python-dotenv==1.0.0            # Environment variables
+
+# HTTP & API
+requests==2.31.0                # HTTP library (for DeepSeek API)
+aiohttp==3.9.1                  # Async HTTP (faster API calls)
+
+# Data Visualization
+plotly==5.18.0                  # Interactive charts
+matplotlib==3.8.2               # Static plots (for backtesting)
+
+# Scientific Computing
+scipy==1.11.4                   # Statistical functions
+
+# Utilities
+python-dateutil==2.8.2          # Date utilities
+pytz==2023.3.post1              # Timezone support
+
+# Performance
+numba==0.58.1                   # JIT compiler for faster calculations (optional)
+
+# Data Storage (for backtesting cache)
+pyarrow==14.0.2                 # Parquet file support
+fastparquet==2023.10.1          # Fast parquet I/O
+
+# REMOVED (no longer needed):
+# ❌ tensorflow (2GB+)
+# ❌ torch (1GB+)
+# ❌ transformers (500MB+)
+# ❌ sentencepiece
+# ❌ huggingface-hub
+# ❌ sentence-transformers
+
+# Total size: ~500MB (down from ~5GB+)

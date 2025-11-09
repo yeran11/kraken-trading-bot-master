@@ -1,0 +1,26 @@
+{
+  "model": "deepseek-r1",
+  "settings": {
+    "min_confidence": 0.50,
+    "enable_calibration": true,
+    "enable_multi_timeframe": true,
+    "enable_portfolio_context": true,
+    "enable_risk_optimization": true,
+    "aggressive_mode": true
+  },
+  "risk_parameters": {
+    "max_position_size": 0.20,
+    "min_position_size": 0.05,
+    "default_stop_loss_percent": 2.0,
+    "default_take_profit_percent": 3.0,
+    "volatility_adjustment": true
+  },
+  "performance_tracking": {
+    "calibration_window": 100,
+    "min_trades_for_calibration": 20,
+    "confidence_adjustment_step": 0.05,
+    "max_confidence_threshold": 0.70,
+    "min_confidence_threshold": 0.40
+  },
+  "notes": "DeepSeek Master configuration - single AI model for all trading decisions"
+}
