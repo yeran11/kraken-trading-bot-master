@@ -46,11 +46,11 @@ pyarrow==14.0.2                 # Parquet file support
 fastparquet==2023.10.1          # Fast parquet I/O
 
 # REMOVED (no longer needed):
-# ❌ tensorflow (2GB+)
-# ❌ torch (1GB+)
-# ❌ transformers (500MB+)
-# ❌ sentencepiece
-# ❌ huggingface-hub
-# ❌ sentence-transformers
+# - tensorflow (2GB+)
+# - torch (1GB+)
+# - transformers (500MB+)
+# - sentencepiece
+# - huggingface-hub
+# - sentence-transformers
 
 # Total size: ~500MB (down from ~5GB+)
