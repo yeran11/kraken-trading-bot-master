@@ -1,0 +1,37 @@
+# Simplified requirements for Windows installation
+# Install these one by one if you have network issues
+
+# Core (install first)
+ccxt
+pandas
+numpy
+
+# Technical Analysis
+ta
+
+# Web Framework
+flask
+flask-socketio
+flask-cors
+
+# Database
+sqlalchemy
+
+# Logging
+loguru
+python-dotenv
+
+# HTTP
+requests
+aiohttp
+
+# Visualization
+plotly
+matplotlib
+
+# Scientific
+scipy
+
+# Utilities
+python-dateutil
+pytz
