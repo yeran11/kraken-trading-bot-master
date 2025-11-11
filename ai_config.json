@@ -1,17 +1,17 @@
 {
   "weights": {
-    "sentiment": 0.00,
-    "technical": 0.00,
-    "macro": 0.00,
-    "deepseek": 1.00
+    "sentiment": 0.0,
+    "technical": 0.0,
+    "macro": 0.0,
+    "deepseek": 1.0
   },
   "settings": {
-    "min_confidence": 0.50,
-    "enable_sentiment": false,
+    "min_confidence": 0.5,
+    "enable_sentiment": true,
     "enable_technical": false,
-    "enable_macro": false,
+    "enable_macro": true,
     "enable_deepseek": true,
-    "enable_ensemble": true
+    "enable_ensemble": false
   },
   "mode": "PURE_INSTITUTIONAL_TRADER",
   "description": "100% DeepSeek control - Leveraging High-Flyer Capital Management's quantitative trading DNA"
